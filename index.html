@@ -463,6 +463,7 @@ body.eu .zrow{grid-template-columns:1fr}
         <div class="sumtxt" id="rng-out" style="margin-top:10px"></div>
       </section>
       <p class="status" id="set-msg" aria-live="polite"></p>
+      <p class="hint" style="text-align:center">앱 버전 2026-10-28 · v3</p>
     </div>
   </div>
 
@@ -1380,7 +1381,9 @@ requestAnimationFrame(function(t){lastT=t;frame(t);});
 
 <script>
 if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
-  window.addEventListener('load',function(){try{navigator.serviceWorker.register('sw.js');}catch(e){}});
+  var had=!!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange',function(){if(had){had=false;location.reload();}});
+  window.addEventListener('load',function(){try{navigator.serviceWorker.register('sw.js',{updateViaCache:'none'});}catch(e){}});
 }
 </script>
 </body></html>
