@@ -1,0 +1,1385 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a2a21">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="룰렛">
+<meta name="robots" content="noindex,nofollow">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>카지노 룰렛</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:wght@500;700&family=DM+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* 레이아웃: 헤더 + 탭 4개(플레이 / 분석 / 기록 / 설정). 플레이는 휠(좌)·테이블(우), 나머지는 한 열 카드 */
+:root{
+  --bg:#0a2a21; --felt:#0f3b2e; --felt-hi:#16503f; --ink:#06100c;
+  --text:#efe8d4; --muted:#9db3a8; --gold:#d6b25e; --gold-dim:#8f7637;
+  --red:#b3262e; --blk:#15191c; --zero:#1d7a4e; --line:rgba(239,232,212,.2);
+  --bar-red:#d23a42; --bar-blk:#6b7880; --bar-grn:#34b57a; --danger:#ff9a8f;
+  --rh:44px; --sw:52px; --st:22px;
+  --disp:"Bodoni Moda",Didot,"Times New Roman",serif;
+  --body:"DM Sans",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--text); font:15px/1.5 var(--body);
+  padding-block:20px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+body.eu [data-mode="am"]{display:none!important}
+body:not(.eu) [data-mode="eu"]{display:none!important}
+.shell{max-width:1000px;margin:0 auto}
+.shell>*{min-width:0}
+
+.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;padding-bottom:14px}
+.brand .eyebrow{font:500 11px/1 var(--mono);letter-spacing:.18em;color:var(--gold);text-transform:uppercase}
+.brand h1{margin:6px 0 0;font:700 clamp(26px,6vw,34px)/1.1 var(--disp);letter-spacing:.02em}
+.brand p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.stats{display:flex;gap:22px}
+.stat span{display:block;font:500 11px/1 var(--mono);letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+.stat b{display:block;margin-top:6px;font:600 24px/1 var(--mono);font-variant-numeric:tabular-nums}
+.stat.bal b{color:var(--gold)}
+
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:0 0 20px}
+.tabs button{flex:1;height:46px;border:0;border-bottom:3px solid transparent;background:transparent;color:var(--muted);font-weight:500;font-size:15px}
+.tabs button[aria-selected="true"]{color:var(--text);border-bottom-color:var(--gold);font-weight:700}
+
+.play{display:grid;gap:20px}
+.play>*{min-width:0}
+@media(min-width:860px){.play{grid-template-columns:minmax(0,1fr) minmax(0,440px);gap:28px;align-items:start}}
+.narrow{max-width:760px;margin:0 auto}
+
+.wheelwrap{width:100%;max-width:400px;aspect-ratio:1;margin:0 auto}
+canvas{display:block;width:100%;height:100%}
+.result{display:flex;align-items:center;gap:14px;margin:14px auto 0;max-width:400px;min-height:64px}
+.rnum{flex:none;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font:700 26px/1 var(--disp);background:var(--ink);border:2px solid var(--gold-dim);color:var(--text)}
+.rnum.red{background:var(--red)} .rnum.black{background:var(--blk)} .rnum.green{background:var(--zero)}
+.rtext{min-width:0}
+.rtext strong{display:block;font-size:16px}
+.rtext span{display:block;color:var(--muted);font-size:13px}
+.rtext .net{font:600 14px/1.4 var(--mono)}
+.net.up{color:#ffb4a8} .net.down{color:#9cc4ff} .net.flat{color:var(--muted)}
+.hist{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:400px;margin:14px auto 0;min-height:26px}
+.hist i{font:500 10px/1 var(--mono);font-style:normal;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line)}
+.hist i.red,.ci.red,.dot.red,.pad .red{background:var(--red)} .hist i.black,.ci.black,.dot.black,.pad .black{background:var(--blk)} .hist i.green,.ci.green,.dot.green,.pad .green{background:var(--zero)}
+
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:10px}
+.seg button{flex:1;height:38px;border:0;background:transparent;font-size:13px;font-weight:500;padding:0 4px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--gold);color:var(--ink);font-weight:700}
+.seg button:disabled{opacity:.5;cursor:not-allowed}
+
+#wseg{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line)}
+#wseg button{border:0;background:var(--felt)}
+#wseg button[aria-pressed="true"]{background:var(--gold);color:var(--ink)}
+#wseg button:last-child{grid-column:span 2}
+.spinrow{max-width:400px;margin:14px auto 0}
+.spinrow .btn.spin{width:100%;grid-column:auto}
+.spinrow .status{margin:8px 2px 0;min-height:20px}
+.tblwrap{overflow-x:auto}
+.mt{width:100%;border-collapse:collapse;font:500 12px/1.3 var(--mono)}
+.mt th{font-weight:500;color:var(--muted);text-align:right;padding:6px;border-bottom:1px solid var(--line);white-space:nowrap}
+.mt td{text-align:right;padding:6px;border-top:1px solid var(--line);white-space:nowrap}
+.mt th:first-child,.mt td:first-child{text-align:left}
+.mt .ok{color:var(--bar-grn)} .mt .no{color:var(--danger)}
+.strat{padding:11px 0;border-top:1px solid var(--line)}
+.strat:first-child{border-top:0;padding-top:0}
+.strat b{display:block;font-size:14px}
+.strat span{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.sumtxt p{margin:0 0 10px;font-size:14px}
+.sumtxt p:last-child{margin-bottom:0}
+.boardsvg{max-width:340px;margin:14px auto 4px}
+.boardsvg svg{display:block;width:100%;height:auto}
+.rec{padding:10px 0;border-top:1px solid var(--line)}
+.rec .rh{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px}
+.rec .dotc{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;font:700 11px/1 var(--mono);color:#06100c;flex:none}
+.rec p{margin:4px 0 0;font-size:13px;color:var(--muted)}
+.rec .nrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.strat .wr{color:var(--gold);font:500 12px/1.5 var(--mono);margin-top:6px}
+.brow.wide{grid-template-columns:112px minmax(0,1fr) 84px}
+.table{background:var(--felt);border:1px solid var(--line);border-radius:10px;padding:12px}
+.cell{position:relative;height:var(--rh);border:1px solid var(--line);border-radius:4px;background:var(--felt-hi);display:flex;align-items:center;justify-content:center;padding:0 2px;font:600 16px/1 var(--mono);-webkit-tap-highlight-color:transparent}
+.cell:active{filter:brightness(1.25)}
+.cell.red{background:var(--red)} .cell.black{background:var(--blk)} .cell.green{background:var(--zero)}
+.cell.win{outline:3px solid var(--gold);outline-offset:-2px;box-shadow:0 0 14px rgba(214,178,94,.8);z-index:5}
+.amt{position:absolute;right:1px;top:1px;width:26px;height:26px;padding:0;border-radius:50%;background:var(--c,var(--gold));color:var(--t,var(--ink));border:2px dashed rgba(255,255,255,.85);font:700 9px/22px var(--mono);text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.5)}
+
+.zrow{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+body.eu .zrow{grid-template-columns:1fr}
+.mid{display:grid;grid-template-columns:var(--sw) var(--st) minmax(0,1fr) var(--sw);gap:4px;margin-top:4px}
+.col{display:flex;flex-direction:column;min-width:0}
+.col .cell{border-radius:0;flex-direction:column;gap:3px;font:600 12px/1.1 var(--body);text-align:center}
+.col .cell small{font:500 10px/1 var(--mono);color:var(--muted)}
+.col.dz .cell{height:calc(var(--rh)*4);font-size:13px}
+.col.out .cell{height:calc(var(--rh)*2);font-size:13px}
+.strip{position:relative}
+.strip .st{height:var(--rh);border:0;border-radius:0;box-shadow:inset 0 0 0 .5px rgba(239,232,212,.45);background:rgba(255,255,255,.05);font:500 14px/1 var(--mono);color:var(--muted);display:flex;align-items:center;justify-content:center;padding:0;position:relative}
+.strip .st .amt{left:50%;right:auto;top:50%;transform:translate(-50%,-50%)}
+.nums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:var(--rh);position:relative}
+.nums>.cell{border:0;border-radius:0;box-shadow:inset 0 0 0 .5px rgba(239,232,212,.5)}
+.hs{position:absolute;width:20px;height:20px;padding:0;border-radius:50%;transform:translate(-50%,-50%);background:rgba(214,178,94,.26);border:1px solid rgba(214,178,94,.65);z-index:3}
+.hs.on{width:28px;height:28px;background:var(--c,var(--gold));border:2px dashed rgba(255,255,255,.85);z-index:4}
+.hs .amt{position:static;display:block;width:auto;height:auto;padding:0;border:0;border-radius:0;background:none;box-shadow:none!important;color:var(--t,var(--ink));font:700 9px/24px var(--mono)}
+.hs.win{box-shadow:0 0 12px 3px rgba(214,178,94,.9)}
+.cols3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:4px calc(var(--sw) + 4px) 0 calc(var(--sw) + var(--st) + 8px)}
+.cols3 .cell{border-radius:0;flex-direction:column;gap:3px;font:600 12px/1.1 var(--body);height:48px}
+.cols3 .cell small{font:500 10px/1 var(--mono);color:var(--muted)}
+.zhead{margin:12px 0 6px;font:500 11px/1 var(--mono);letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+.zspec{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:4px}
+.zspec .cell{height:38px;font:500 12px/1.1 var(--body);flex-direction:column;gap:2px}
+.zspec .cell small{font:500 10px/1 var(--mono);color:var(--muted)}
+.edge{margin:10px 2px 0;color:var(--muted);font-size:12px}
+.guide{margin:10px 0 0;border:1px solid var(--line);border-radius:8px;padding:2px 12px;font-size:13px}
+.guide summary{cursor:pointer;height:40px;display:flex;align-items:center;font-weight:500}
+.guide table{width:100%;border-collapse:collapse;margin:4px 0 10px}
+.guide td{padding:5px 0;border-top:1px solid var(--line);vertical-align:top}
+.guide td:last-child{text-align:right;font-family:var(--mono);white-space:nowrap;padding-left:10px}
+.guide p{margin:0 0 10px;color:var(--muted)}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:16px 0 4px}
+.chipbtn{position:relative;width:48px;height:48px;padding:0;border-radius:50%;border:0;color:var(--t,#fff);background:repeating-conic-gradient(#f4f1e6 0 14deg,var(--c) 14deg 60deg);box-shadow:0 3px 0 rgba(0,0,0,.5),0 5px 8px rgba(0,0,0,.35);transition:transform .12s}
+.chipbtn::before{content:"";position:absolute;inset:6px;border-radius:50%;background:var(--c);border:2px dashed rgba(255,255,255,.8)}
+.chipbtn span{position:relative;z-index:1;font:700 14px/1 var(--mono);text-shadow:0 1px 1px rgba(0,0,0,.25)}
+.chipbtn[aria-pressed="true"]{transform:translateY(-5px);outline:2px solid var(--gold);outline-offset:3px}
+.chipbtn:disabled{opacity:.3;cursor:not-allowed;transform:none}
+.acts{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:14px}
+.acts .btn{font-size:12.5px}
+.table.erasing .cell.on{outline:2px dashed var(--danger);outline-offset:-2px}
+.btn{height:44px;border-radius:6px;border:1px solid var(--line);background:transparent;font-size:13px;font-weight:500;padding:0 2px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.spin{grid-column:1/-1;height:52px;background:var(--gold);color:var(--ink);border-color:var(--gold);font:700 17px/1 var(--body);letter-spacing:.08em}
+.btn.refill{grid-column:1/-1;border-color:var(--gold);color:var(--gold);font-size:14px}
+.status{min-height:22px;margin:12px 2px 0;color:var(--muted);font-size:13px;text-align:center}
+
+/* 분석·기록·설정 */
+.cards{display:grid;gap:14px}
+.card{background:var(--felt);border:1px solid var(--line);border-radius:10px;padding:14px}
+.card h2{margin:0;font:700 16px/1.3 var(--body)}
+.rowhead{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;margin-bottom:10px}
+.badge{font:500 11px/1 var(--mono);border:1px solid var(--gold-dim);color:var(--gold);padding:5px 9px;border-radius:999px}
+.hint{color:var(--muted);font-size:12px;margin:8px 0 0}
+.entry{display:flex;gap:8px}
+.entry input{flex:1;min-width:0;height:44px;border-radius:6px;border:1px solid var(--line);background:var(--ink);padding:0 12px;font-size:16px}
+.entry .btn{padding:0 18px;background:var(--gold);color:var(--ink);border-color:var(--gold);font-weight:700;font-size:14px}
+.pad{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:6px;margin:4px 0 10px}
+.pad button{height:40px;border-radius:6px;border:1px solid var(--line);font:600 14px/1 var(--mono);color:#fff}
+.pad button:active{filter:brightness(1.3)}
+.rowbtn{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.rowbtn .btn{padding:0 14px}
+.btn.danger{border-color:rgba(255,154,143,.5);color:var(--danger)}
+.btn.armed{background:var(--danger);color:var(--ink);border-color:var(--danger);font-weight:700}
+.sum{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.sum>div{border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-width:0}
+.sum .wide{grid-column:1/-1}
+.sum span{display:block;font:500 11px/1 var(--mono);letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+.sum b{display:block;margin-top:6px;font:600 22px/1 var(--mono)}
+.top5{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+.top5 div{display:flex;align-items:center;gap:6px;font:500 12px/1 var(--mono);color:var(--muted)}
+.ci{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;font:600 12px/1 var(--mono);font-style:normal;color:#fff;border:1px solid var(--line)}
+.legend{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;margin:0 0 10px}
+.legend i{display:inline-block;width:0;height:14px;border-left:2px dashed var(--gold)}
+.bars{display:grid;gap:5px}
+.brow{display:grid;grid-template-columns:52px minmax(0,1fr) 112px;gap:8px;align-items:center;min-height:28px}
+.blab{font-size:13px}
+.brow .ci{justify-self:start}
+.btrack{position:relative;height:18px;background:rgba(255,255,255,.08);border-radius:3px}
+.bfill{height:100%;border-radius:3px}
+.bexp{position:absolute;top:-3px;bottom:-3px;width:0;border-left:2px dashed var(--gold)}
+.bval{font:500 11px/1 var(--mono);text-align:right;white-space:nowrap}
+.empty{margin:0 0 12px;padding:10px 12px;border:1px dashed var(--gold-dim);border-radius:8px;color:var(--muted);font-size:13px}
+.dots{display:flex;flex-wrap:wrap;gap:8px}
+.dot{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;font:600 14px/1 var(--mono);font-style:normal;color:#fff;border:1px solid var(--line)}
+.dot.last{outline:2px solid var(--gold);outline-offset:2px}
+.sub{margin:22px 0 8px;font:700 14px/1.3 var(--body)}
+.radial{max-width:440px;margin:0 auto}
+.radial svg{display:block;width:100%;height:auto}
+.radial .sec{cursor:pointer}
+.foot{color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding-top:12px;margin:24px 0 0}
+@media(prefers-reduced-motion:reduce){.chipbtn{transition:none}}
+</style>
+
+<main class="shell">
+  <header class="top">
+    <div class="brand">
+      <div class="eyebrow" id="eyebrow">American Roulette · 0, 00, 1–36</div>
+      <h1>카지노 룰렛</h1>
+      <p>가상 칩 전용 · 실제 금액 없음</p>
+    </div>
+    <div class="stats">
+      <div class="stat bal"><span>보유 칩</span><b id="bal">1,000</b></div>
+      <div class="stat"><span>배팅 합계</span><b id="tot">0</b></div>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="화면">
+    <button type="button" role="tab" id="t-play" aria-selected="true" aria-controls="p-play">플레이</button>
+    <button type="button" role="tab" id="t-ana" aria-selected="false" aria-controls="p-ana">분석</button>
+    <button type="button" role="tab" id="t-str" aria-selected="false" aria-controls="p-str">전략</button>
+    <button type="button" role="tab" id="t-his" aria-selected="false" aria-controls="p-his">기록</button>
+    <button type="button" role="tab" id="t-set" aria-selected="false" aria-controls="p-set">설정</button>
+  </nav>
+
+  <!-- 플레이 -->
+  <div class="play" id="p-play" role="tabpanel" aria-labelledby="t-play">
+    <section aria-label="룰렛 휠">
+      <div class="wheelwrap" id="ww"><canvas id="cv" role="img" aria-label="회전하는 룰렛 휠"></canvas></div>
+      <div class="spinrow"><button class="btn spin" id="spin" type="button">스핀</button><p class="status" id="smsg" aria-live="polite"></p></div>
+      <div class="result" aria-live="polite">
+        <div class="rnum green" id="rnum">0</div>
+        <div class="rtext"><strong id="rtitle">배팅 후 스핀</strong><span id="rsub">칩을 올리고 스핀을 누를 것</span><span class="net flat" id="rnet"></span></div>
+      </div>
+      <div class="hist" id="hist" aria-label="최근 결과"></div>
+    </section>
+
+    <section aria-label="배팅 테이블">
+      <div class="seg mseg" role="group" aria-label="룰렛 종류">
+        <button type="button" data-m="am" aria-pressed="true">아메리칸 · 0, 00</button>
+        <button type="button" data-m="eu" aria-pressed="false">유러피언 · 0</button>
+      </div>
+      <div class="table">
+        <div class="zrow" id="zrow"></div>
+        <div class="mid">
+          <div class="col dz" id="dz"></div>
+          <div class="col strip" id="strip"></div>
+          <div class="nums" id="nums"></div>
+          <div class="col out" id="out"></div>
+        </div>
+        <div class="cols3" id="cols3"></div>
+      </div>
+      <p class="edge" id="edge"></p>
+      <details class="guide">
+        <summary>배팅 종류와 배당</summary>
+        <p>숫자 칸 사이의 금색 점을 누르면 맞닿은 숫자를 묶어서 배팅함. 가장자리 › 는 가로 한 줄(스트리트), 그 사이 점은 두 줄(식스라인).</p>
+        <table>
+          <tr><td>스트레이트 · 숫자 1개</td><td>35:1</td></tr>
+          <tr><td>스플릿 · 인접한 2개 (칸 경계 점)</td><td>17:1</td></tr>
+          <tr><td>스트리트 · 가로 3개 (왼쪽 ›)</td><td>11:1</td></tr>
+          <tr><td>코너 · 4개 (네 칸 교차점)</td><td>8:1</td></tr>
+          <tr><td>식스라인 · 가로 6개 (왼쪽 두 줄 사이 점)</td><td>5:1</td></tr>
+          <tr><td>다즌 · 1–12 / 13–24 / 25–36</td><td>2:1</td></tr>
+          <tr><td>열 · 세로 12개</td><td>2:1</td></tr>
+          <tr><td>빨강·검정 / 홀·짝 / 1–18·19–36</td><td>1:1</td></tr>
+        </table>
+      </details>
+      <div class="chips" id="chips" role="group" aria-label="칩 금액"></div>
+      <p class="hint" style="text-align:center">사용 가능한 칩: 1 · 5 · 10 · 20 · 50 · 100</p>
+      <div class="acts">
+          <button class="btn" id="undo" type="button">되돌리기</button>
+        <button class="btn" id="erase" type="button" aria-pressed="false">🧽 지우개</button>
+        <button class="btn" id="clear" type="button">전체 삭제</button>
+        <button class="btn" id="rebet" type="button">직전 배팅</button>
+        <button class="btn" id="dbl" type="button">×2</button>
+        <button class="btn refill" id="refill" type="button" hidden>칩 1,000개 다시 받기</button>
+      </div>
+      <div class="status" id="status" aria-live="polite"></div>
+    </section>
+  </div>
+
+  <!-- 분석 -->
+  <div class="narrow" id="p-ana" role="tabpanel" aria-labelledby="t-ana" hidden>
+    <div class="cards">
+      <section class="card">
+        <div class="rowhead"><h2>나온 번호 입력</h2><span class="badge" id="a-mode"></span></div>
+        <div class="entry">
+          <input id="ent" type="text" autocomplete="off" placeholder="예: 7 14 00 26" aria-label="나온 번호">
+          <button class="btn" id="ent-add" type="button">추가</button>
+        </div>
+        <p class="hint" id="ent-msg">공백·쉼표·마침표로 구분하면 여러 개를 한 번에 넣을 수 있음. 00은 "00"으로 입력.</p>
+        <details class="guide" open>
+          <summary>번호 패드 (누르면 바로 1개 추가)</summary>
+          <div class="pad" id="pad"></div>
+        </details>
+        <div class="rowbtn"><button class="btn" id="ent-undo" type="button">마지막 입력 삭제</button></div>
+      </section>
+
+      <section class="card">
+        <div class="rowhead"><h2>요약</h2></div>
+        <div class="seg" id="wseg" role="group" aria-label="분석 범위">
+          <button type="button" data-w="0" aria-pressed="true">전체</button>
+          <button type="button" data-w="50" aria-pressed="false">최근 50</button>
+          <button type="button" data-w="100" aria-pressed="false">최근 100</button>
+          <button type="button" data-w="200" aria-pressed="false">최근 200</button>
+          <button type="button" data-w="300" aria-pressed="false">최근 300</button>
+          <button type="button" data-w="400" aria-pressed="false">최근 400</button>
+          <button type="button" data-w="500" aria-pressed="false">최근 500</button>
+        </div>
+        <div id="empty" class="empty" hidden>아직 기록이 없음. 위에서 번호를 입력하거나 플레이 탭에서 스핀하면 여기에 쌓임.</div>
+        <div class="sum" id="sum"></div>
+        <p class="hint">각 스핀은 서로 독립이라 이 통계는 다음 번호를 예측하지 못함. 표본이 적을 때의 쏠림은 대부분 우연임.</p>
+      </section>
+
+      <section class="card">
+        <div class="rowhead"><h2>번호별 확률</h2></div>
+        <div class="seg" id="sseg" role="group" aria-label="정렬">
+          <button type="button" data-s="num" aria-pressed="true">번호순</button>
+          <button type="button" data-s="cnt" aria-pressed="false">많이 나온 순</button>
+        </div>
+        <div class="legend"><i></i><span id="lg-num"></span></div>
+        <div class="bars" id="bars-num"></div>
+        <h3 class="sub">룰렛 휠 배열 그래프</h3>
+        <div class="radial" id="radial"></div>
+        <p class="hint">실제 휠 배열 그대로 원형 배치. 바깥으로 뻗은 막대 길이 = 확률, 막대 끝 숫자 = %, 금색 점선 원 = 이론 확률. 번호를 누르면 가운데에 상세가 표시됨.</p>
+      </section>
+
+      <div class="cards" id="groups"></div>
+    </div>
+  </div>
+
+  <!-- 전략 -->
+  <div class="narrow" id="p-str" role="tabpanel" aria-labelledby="t-str" hidden>
+    <div class="cards">
+      <section class="card">
+        <div class="rowhead"><h2>어디에 걸까</h2><span class="badge" id="rec-badge"></span></div>
+        <div class="sumtxt" id="rec-verdict"></div>
+        <div class="boardsvg" id="rec-board"></div>
+        <div id="rec-list"></div>
+        <p class="hint" id="rec-note"></p>
+      </section>
+
+      <section class="card">
+        <div class="rowhead"><h2>현재 상황</h2><span class="badge" id="s-mode"></span></div>
+        <div class="sum" id="s-now" style="margin:0 0 12px"></div>
+        <div class="hint" style="margin:0 0 6px">보유 칩 직접 입력</div>
+        <div class="entry">
+          <input id="bal-in2" type="text" inputmode="numeric" autocomplete="off" placeholder="예: 5000" aria-label="보유 칩 직접 입력">
+          <button class="btn" id="bal-set2" type="button">적용</button>
+        </div>
+        <p class="hint" id="bal-msg" style="margin:6px 0 12px"></p>
+        <div class="hint" style="margin:0 0 6px">기본 배팅 단위</div>
+        <div class="seg" id="useg" role="group" aria-label="기본 배팅 단위">
+          <button type="button" data-u="1" aria-pressed="true">1칩</button>
+          <button type="button" data-u="5" aria-pressed="false">5칩</button>
+          <button type="button" data-u="10" aria-pressed="false">10칩</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="rowhead"><h2>현재 룰렛의 한 스핀 승률</h2><span class="badge" id="w-mode"></span></div>
+        <div class="bars" id="w-bars"></div>
+        <p class="hint" id="w-note"></p>
+      </section>
+
+      <section class="card">
+        <div class="rowhead"><h2>마틴게일 단계표</h2></div>
+        <div class="tblwrap"><table class="mt" id="mt"></table></div>
+        <p class="hint" id="mt-note"></p>
+      </section>
+
+      <section class="card">
+        <div class="rowhead"><h2>전략 종류</h2></div>
+        <div id="slist"></div>
+        <p class="hint">모두 빨강/검정, 홀/짝처럼 1:1 배당 외곽 배팅에 쓰는 방식임. 어떤 전략도 한 스핀의 승률을 바꾸지 못함. 한 사이클 = 전략이 처음 상태로 돌아올 때까지(마틴게일은 첫 승리, 파롤리는 3연승 또는 1패, 플랫은 1스핀). 현재 보유 칩·기본 단위·룰렛 종류 기준으로 각 1만 사이클을 모의 계산한 값이고, 이익/본전/손실은 사이클 종료 시점의 손익 기준임.</p>
+      </section>
+
+      <section class="card">
+        <div class="rowhead"><h2>전략 시뮬레이션</h2></div>
+        <div class="hint" style="margin:0 0 6px">스핀 횟수</div>
+        <div class="seg" id="spseg" role="group" aria-label="스핀 횟수">
+          <button type="button" data-n="100" aria-pressed="false">100</button>
+          <button type="button" data-n="300" aria-pressed="false">300</button>
+          <button type="button" data-n="500" aria-pressed="true">500</button>
+          <button type="button" data-n="1000" aria-pressed="false">1000</button>
+        </div>
+        <div class="hint" style="margin:0 0 6px">중단 조건</div>
+        <div class="seg" id="gseg" role="group" aria-label="중단 조건">
+          <button type="button" data-g="0" aria-pressed="false">중단 없음</button>
+          <button type="button" data-g="0.1" aria-pressed="true">+10% 달성</button>
+          <button type="button" data-g="0.2" aria-pressed="false">+20% 달성</button>
+        </div>
+        <div id="sim-out"></div>
+        <p class="hint" id="sim-hint"></p>
+        <div class="rowbtn"><button class="btn" id="sim-redo" type="button">다시 돌리기</button></div>
+      </section>
+
+      <section class="card">
+        <div class="rowhead"><h2>지금 상황에서의 결론</h2></div>
+        <div class="sumtxt" id="sim-sum"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- 기록 -->
+  <div class="narrow" id="p-his" role="tabpanel" aria-labelledby="t-his" hidden>
+    <section class="card">
+      <div class="rowhead"><h2>나온 번호</h2><span class="badge" id="h-mode"></span></div>
+      <p class="hint" id="h-info" style="margin:0 0 12px"></p>
+      <div class="dots" id="dots"></div>
+    </section>
+  </div>
+
+  <!-- 설정 -->
+  <div class="narrow" id="p-set" role="tabpanel" aria-labelledby="t-set" hidden>
+    <div class="cards">
+      <section class="card">
+        <div class="rowhead"><h2>룰렛 종류</h2></div>
+        <div class="seg mseg" role="group" aria-label="룰렛 종류">
+          <button type="button" data-m="am" aria-pressed="true">아메리칸 · 0, 00</button>
+          <button type="button" data-m="eu" aria-pressed="false">유러피언 · 0</button>
+        </div>
+        <p class="hint">종류마다 기록이 따로 쌓임. 바꾸면 올려둔 칩은 환불됨.</p>
+      </section>
+      <section class="card">
+        <div class="rowhead"><h2>기록 자동 채우기</h2></div>
+        <p class="hint" style="margin:0 0 8px">배팅 없이 룰렛을 돌려 현재 룰렛 기록을 목표 횟수까지 채움. 스핀과 같은 난수 함수를 쓰고, 칩은 건드리지 않음.</p>
+        <div class="entry">
+          <input id="fill-in" type="text" inputmode="numeric" autocomplete="off" value="200" aria-label="목표 기록 횟수">
+          <button class="btn" id="fill-go" type="button">채우기</button>
+        </div>
+        <p class="hint" id="fill-msg" aria-live="polite"></p>
+      </section>
+      <section class="card">
+        <div class="rowhead"><h2>분석 기록 초기화</h2></div>
+        <p class="hint" style="margin:0 0 4px" id="set-cnt"></p>
+        <div class="rowbtn">
+          <button class="btn danger" id="rs-cur" type="button"></button>
+          <button class="btn danger" id="rs-all" type="button"></button>
+        </div>
+        <p class="hint">버튼을 누르면 확인 문구로 바뀌고, 4초 안에 한 번 더 눌러야 실행됨.</p>
+      </section>
+      <section class="card">
+        <div class="rowhead"><h2>보유 칩</h2></div>
+        <div class="entry">
+          <input id="bal-in" type="text" inputmode="numeric" autocomplete="off" placeholder="원하는 칩 수 (예: 5000)" aria-label="보유 칩 직접 입력">
+          <button class="btn" id="bal-set" type="button">적용</button>
+        </div>
+        <p class="hint">입력한 값으로 보유 칩이 바뀌고, 올려둔 칩은 먼저 회수됨. 분석 기록은 그대로 유지됨. 최대 100,000,000.</p>
+        <div class="rowbtn"><button class="btn danger" id="rs-bal" type="button"></button></div>
+      </section>
+      <section class="card">
+        <div class="rowhead"><h2>난수 검증</h2></div>
+        <p class="hint" style="margin:0 0 6px">스핀 결과는 브라우저 보안 난수(crypto.getRandomValues)로 현재 룰렛의 칸을 균등하게 뽑아 정함. 배팅액·보유 칩·이전 결과·설정을 보지 않음. 아래 버튼은 같은 추첨 함수를 10만 번 돌려 균등한지 검사함.</p>
+        <div class="rowbtn"><button class="btn" id="rng-test" type="button">10만 회 검증</button></div>
+        <div class="sumtxt" id="rng-out" style="margin-top:10px"></div>
+      </section>
+      <p class="status" id="set-msg" aria-live="polite"></p>
+    </div>
+  </div>
+
+</main>
+
+<script>
+(function(){
+'use strict';
+var WHEELS={
+  am:[0,28,9,26,30,11,7,20,32,17,5,22,34,15,3,24,36,13,1,37,27,10,25,29,12,8,19,31,18,6,21,33,16,4,23,35,14,2],
+  eu:[0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26]
+};
+var REDS=[1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+var TAU=Math.PI*2,START=1000,CHIPS=[1,5,10,20,50,100],RH=44,LOGCAP=20000;
+var KO={green:'초록',red:'빨강',black:'검정'};
+var CHIPCOL={1:['#e9e5d6','#06100c'],5:['#c0392b','#ffffff'],10:['#2f6fd0','#ffffff'],20:['#2e9b57','#ffffff'],50:['#e08a1e','#06100c'],100:['#16191c','#d6b25e']};
+function chipInfo(v){
+  var left=v,cnt=0,top=0,i,q;
+  for(i=CHIPS.length-1;i>=0;i--){q=Math.floor(left/CHIPS[i]);if(q&&!top)top=CHIPS[i];cnt+=q;left-=q*CHIPS[i];}
+  return {top:top||1,n:cnt};
+}
+var reduced=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+var MODE='am',WHEEL=WHEELS.am,N=38,SEG=TAU/38,TAB='play';
+
+function isRed(n){return REDS.indexOf(n)>=0;}
+function colorOf(n){return (n===0||n===37)?'green':(isRed(n)?'red':'black');}
+function lbl(n){return n===37?'00':String(n);}
+function modeName(m){return m==='am'?'아메리칸':'유러피언';}
+function fmt(v){return Number(v).toLocaleString('ko-KR');}
+function short(v){return v>=1000?(Math.round(v/100)/10)+'k':String(v);}
+function rnd(n){
+  var a=new Uint32Array(1),lim=Math.floor(4294967296/n)*n;
+  do{crypto.getRandomValues(a);}while(a[0]>=lim);
+  return a[0]%n;
+}
+function range(a,b){var r=[];for(var i=a;i<=b;i++)r.push(i);return r;}
+var $=function(id){return document.getElementById(id);};
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
+
+/* ---- 배팅 정의: key -> 맞는 숫자들, 회수 배수(배당+1) ---- */
+var REG={};
+function reg(k,l,cover,m,mode){REG[k]={l:l,cover:cover,m:m,mode:mode||''};}
+var ALL=range(1,36),n,r,c,a;
+for(n=0;n<=37;n++)reg('n:'+n,'숫자 '+lbl(n),[n],36,n===37?'am':'');
+reg('red','빨강',ALL.filter(isRed),2);
+reg('black','검정',ALL.filter(function(x){return !isRed(x);}),2);
+reg('even','짝수',ALL.filter(function(x){return x%2===0;}),2);
+reg('odd','홀수',ALL.filter(function(x){return x%2===1;}),2);
+reg('low','1–18',range(1,18),2);
+reg('high','19–36',range(19,36),2);
+reg('d1','1–12 다즌',range(1,12),3);
+reg('d2','13–24 다즌',range(13,24),3);
+reg('d3','25–36 다즌',range(25,36),3);
+reg('c1','열 1',ALL.filter(function(x){return x%3===1;}),3);
+reg('c2','열 2',ALL.filter(function(x){return x%3===2;}),3);
+reg('c3','열 3',ALL.filter(function(x){return x%3===0;}),3);
+for(r=0;r<12;r++){
+  a=3*r+1;
+  reg('t:'+a,'스트리트 '+a+'·'+(a+1)+'·'+(a+2),[a,a+1,a+2],12);
+  for(c=0;c<3;c++){
+    a=3*r+c+1;
+    if(c<2)reg('s:'+a+'-'+(a+1),'스플릿 '+a+'·'+(a+1),[a,a+1],18);
+    if(r<11)reg('s:'+a+'-'+(a+3),'스플릿 '+a+'·'+(a+3),[a,a+3],18);
+    if(r<11&&c<2)reg('k:'+a,'코너 '+a+'·'+(a+1)+'·'+(a+3)+'·'+(a+4),[a,a+1,a+3,a+4],9);
+  }
+  if(r<11){a=3*r+1;reg('l:'+a,'식스라인 '+a+'–'+(a+5),range(a,a+5),6);}
+}
+var ZS=[
+  ['z:0-00','0·00','스플릿',[0,37],18,'am'],
+  ['z:0-1','0·1','스플릿',[0,1],18,''],
+  ['z:0-2','0·2','스플릿',[0,2],18,''],
+  ['z:0-3','0·3','스플릿',[0,3],18,'eu'],
+  ['z:00-2','00·2','스플릿',[37,2],18,'am'],
+  ['z:00-3','00·3','스플릿',[37,3],18,'am'],
+  ['z:0-1-2','0·1·2','트리오',[0,1,2],12,''],
+  ['z:0-2-3','0·2·3','트리오',[0,2,3],12,'eu'],
+  ['z:00-2-3','00·2·3','트리오',[37,2,3],12,'am'],
+  ['z:0-00-2','0·00·2','트리오',[0,37,2],12,'am'],
+  ['z:first4','0·1·2·3','첫 네 개',[0,1,2,3],9,'eu'],
+  ['z:top5','0·00·1·2·3','탑라인',[0,37,1,2,3],7,'am']
+];
+ZS.forEach(function(z){reg(z[0],z[2]+' '+z[1],z[3],z[4],z[5]);});
+function payTxt(k){return (REG[k].m-1)+':1';}
+
+/* ---- 상태 / 기록 저장 ---- */
+var S={balance:START,bets:{},stack:[],last:{},chip:1,spinning:false,theta:0,rel:0,ballR:0.66};
+var LOGS={am:[],eu:[]},AN={win:0,sort:'num',sel:null};
+try{var sv=parseInt(localStorage.getItem('roulette-bal'),10);if(isFinite(sv)&&sv>=0)S.balance=sv;}catch(e){}
+try{if(localStorage.getItem('roulette-mode')==='eu')MODE='eu';}catch(e){}
+['am','eu'].forEach(function(m){
+  try{
+    var v=JSON.parse(localStorage.getItem('roulette-log-'+m));
+    if(Array.isArray(v))LOGS[m]=v.filter(function(x){return typeof x==='number'&&x>=0&&x<=(m==='am'?37:36);});
+  }catch(e){}
+});
+function save(){try{localStorage.setItem('roulette-bal',String(S.balance));localStorage.setItem('roulette-mode',MODE);}catch(e){}}
+function saveLog(m){try{localStorage.setItem('roulette-log-'+m,JSON.stringify(LOGS[m]));}catch(e){}}
+function addResults(list){
+  var L=LOGS[MODE];
+  list.forEach(function(x){L.push(x);});
+  if(L.length>LOGCAP)L.splice(0,L.length-LOGCAP);
+  saveLog(MODE);renderHist();
+}
+function total(){var t=0;for(var k in S.bets)t+=S.bets[k];return t;}
+function say(m){$('status').textContent=m;}
+function relOf(i){return (i+0.5)*SEG-Math.PI/2;}
+
+/* ---- 테이블 생성 ---- */
+var cells={};
+function mk(key,text,cls,sub,parent){
+  var b=document.createElement('button');b.type='button';b.className='cell '+cls;b.dataset.key=key;
+  b.setAttribute('aria-label',REG[key].l+' 배팅');
+  if(REG[key].mode)b.dataset.mode=REG[key].mode;
+  var l=document.createElement('span');l.textContent=text;b.appendChild(l);
+  if(sub){var s=document.createElement('small');s.textContent=sub;b.appendChild(s);}
+  var am=document.createElement('span');am.className='amt';am.hidden=true;b.appendChild(am);
+  b.addEventListener('click',function(){place(key);});
+  cells[key]=b;parent.appendChild(b);return b;
+}
+function hs(key,xPct,y,parent){
+  var b=document.createElement('button');b.type='button';b.className='hs';b.dataset.key=key;
+  b.setAttribute('aria-label',REG[key].l+' 배팅');
+  b.style.left=xPct+'%';b.style.top=y+'px';
+  var am=document.createElement('span');am.className='amt';am.hidden=true;b.appendChild(am);
+  b.addEventListener('click',function(e){e.stopPropagation();place(key);});
+  cells[key]=b;parent.appendChild(b);return b;
+}
+mk('n:0','0','green',null,$('zrow'));
+mk('n:37','00','green',null,$('zrow'));
+var nums=$('nums');
+for(n=1;n<=36;n++)mk('n:'+n,String(n),colorOf(n),null,nums);
+var X1=100/3,X2=200/3,XC=[100/6,50,500/6];
+for(r=0;r<12;r++)for(c=0;c<2;c++){a=3*r+c+1;hs('s:'+a+'-'+(a+1),(c+1)*X1,r*RH+RH/2,nums);}
+for(r=0;r<11;r++)for(c=0;c<3;c++){a=3*r+c+1;hs('s:'+a+'-'+(a+3),XC[c],(r+1)*RH,nums);}
+for(r=0;r<11;r++)for(c=0;c<2;c++){a=3*r+c+1;hs('k:'+a,(c+1)*X1,(r+1)*RH,nums);}
+['d1','d2','d3'].forEach(function(k){mk(k,REG[k].l.replace(' 다즌',''),'out','2:1',$('dz'));});
+var strip=$('strip');
+for(r=0;r<12;r++){mk('t:'+(3*r+1),'›','st',null,strip);}
+for(r=0;r<11;r++){hs('l:'+(3*r+1),50,(r+1)*RH,strip);}
+['low','even','red','black','odd','high'].forEach(function(k){
+  mk(k,REG[k].l,'out'+(k==='red'?' red':k==='black'?' black':''),k==='red'||k==='black'?null:'1:1',$('out'));
+});
+['c1','c2','c3'].forEach(function(k){mk(k,REG[k].l,'out','2:1',$('cols3'));});
+
+var chipBox=$('chips');
+function syncChips(){
+  [].forEach.call(chipBox.children,function(b){
+    var v=Number(b.dataset.v);
+    b.disabled=S.balance<v;
+    b.setAttribute('aria-pressed',v===S.chip?'true':'false');
+  });
+}
+CHIPS.forEach(function(v){
+  var b=document.createElement('button');b.type='button';b.className='chipbtn';b.dataset.v=v;
+  var sp=document.createElement('span');sp.textContent=v;b.appendChild(sp);
+  b.style.setProperty('--c',CHIPCOL[v][0]);b.style.setProperty('--t',CHIPCOL[v][1]);
+  b.setAttribute('aria-label','칩 '+v);
+  b.addEventListener('click',function(){S.chip=v;syncChips();});
+  chipBox.appendChild(b);
+});
+
+/* ---- 배팅 동작 ---- */
+function clearWin(){for(var k in cells)cells[k].classList.remove('win');}
+function setErase(on){
+  S.erase=!!on;
+  $('erase').classList.toggle('armed',S.erase);$('erase').setAttribute('aria-pressed',S.erase?'true':'false');
+  var t=document.querySelector('.table');if(t)t.classList.toggle('erasing',S.erase);
+  if(S.erase)say('지우개 켜짐 · 지울 칸을 누를 것');else say('');
+}
+function eraseAt(key){
+  var v=S.bets[key]||0;
+  if(!v){say('이 칸에는 배팅이 없음');return;}
+  S.balance+=v;delete S.bets[key];
+  S.stack=S.stack.filter(function(x){return x.k!==key;});
+  say(REG[key].l+' 배팅 '+fmt(v)+'칩 회수');render();
+}
+function place(key){
+  if(S.spinning)return;
+  if(S.erase){eraseAt(key);return;}
+  if(S.balance<S.chip){say('칩이 부족함. 더 작은 칩을 고를 것');return;}
+  clearWin();S.balance-=S.chip;S.bets[key]=(S.bets[key]||0)+S.chip;S.stack.push({k:key,a:S.chip});
+  say(REG[key].l+' · 배당 '+payTxt(key));render();
+}
+function undo(){
+  if(S.spinning||!S.stack.length)return;
+  var x=S.stack.pop();S.bets[x.k]-=x.a;if(S.bets[x.k]<=0)delete S.bets[x.k];S.balance+=x.a;say('');render();
+}
+function clearAll(){
+  if(S.spinning)return;
+  S.balance+=total();S.bets={};S.stack=[];say('');render();
+}
+function rebet(){
+  if(S.spinning)return;
+  var need=0,k;for(k in S.last)need+=S.last[k];
+  if(!need){say('직전 배팅이 없음');return;}
+  clearAll();
+  if(need>S.balance){say('칩이 부족해서 직전 배팅을 재현할 수 없음');return;}
+  clearWin();
+  for(k in S.last){S.bets[k]=S.last[k];S.stack.push({k:k,a:S.last[k]});S.balance-=S.last[k];}
+  render();
+}
+function dbl(){
+  if(S.spinning)return;
+  var t=total();
+  if(!t)return;
+  if(t>S.balance){say('칩이 부족해서 2배로 늘릴 수 없음');return;}
+  var cur=JSON.parse(JSON.stringify(S.bets)),k;
+  for(k in cur){S.bets[k]+=cur[k];S.stack.push({k:k,a:cur[k]});}
+  S.balance-=t;render();
+}
+function render(){
+  $('bal').textContent=fmt(S.balance);$('tot').textContent=fmt(total());
+  for(var k in cells){
+    var e=cells[k],am=e.querySelector('.amt'),v=S.bets[k]||0;
+    am.hidden=!v;am.textContent=v?short(v):'';e.classList.toggle('on',!!v);
+    if(v){
+      var ci=chipInfo(v),cc=CHIPCOL[ci.top],m=Math.min(ci.n,4)-1,sh=[],j;
+      e.style.setProperty('--c',cc[0]);e.style.setProperty('--t',cc[1]);
+      for(j=1;j<=m;j++)sh.push('0 '+(j*3)+'px 0 '+cc[0]);
+      sh.push('0 '+(m*3+1)+'px 2px rgba(0,0,0,.5)');
+      am.style.boxShadow=sh.join(',');
+    }
+  }
+  var has=total()>0,broke=S.balance<1&&!has&&!S.spinning;
+  $('spin').disabled=S.spinning||!has;
+  $('undo').disabled=S.spinning||!S.stack.length;
+  $('clear').disabled=S.spinning||!has;
+  $('erase').disabled=S.spinning||!has;
+  if(!has&&S.erase)setErase(false);
+  $('rebet').disabled=S.spinning;
+  $('dbl').disabled=S.spinning||!has;
+  [].forEach.call(document.querySelectorAll('.mseg button'),function(b){b.disabled=S.spinning;});
+  if(S.balance<S.chip){
+    var af=CHIPS.filter(function(v){return v<=S.balance;});
+    if(af.length)S.chip=af[af.length-1];
+  }
+  syncChips();
+  $('refill').hidden=!broke;
+  $('spin').textContent=S.spinning?'휠 회전 중…':'스핀';
+  $('smsg').textContent=(!has&&!S.spinning&&!broke)?'아래 테이블에서 칩을 올린 뒤 스핀':'';
+}
+function renderHist(){
+  var h=$('hist');h.textContent='';
+  LOGS[MODE].slice(-14).reverse().forEach(function(x){h.appendChild(el('i',colorOf(x),lbl(x)));});
+}
+function resetResult(){
+  var rn=$('rnum');rn.textContent='0';rn.className='rnum green';
+  $('rtitle').textContent='배팅 후 스핀';$('rsub').textContent='칩을 올리고 스핀을 누를 것';
+  var ne=$('rnet');ne.textContent='';ne.className='net flat';
+}
+
+/* ---- 룰렛 종류 ---- */
+function setMode(m,user){
+  if(S.spinning)return;
+  if(user&&m===MODE)return;
+  if(user)clearAll();
+  MODE=m;WHEEL=WHEELS[m];N=WHEEL.length;SEG=TAU/N;
+  document.body.classList.toggle('eu',m==='eu');
+  [].forEach.call(document.querySelectorAll('.mseg button'),function(b){b.setAttribute('aria-pressed',b.dataset.m===m?'true':'false');});
+  $('eyebrow').textContent=m==='am'?'American Roulette · 0, 00, 1–36':'European Roulette · 0, 1–36';
+  $('edge').textContent=m==='am'
+    ?'아메리칸: 0과 00이 있어 하우스 엣지 5.26% (탑라인 7.89%). 0 또는 00이 나오면 외곽 배팅은 모두 잃음.'
+    :'유러피언: 0이 하나뿐이라 하우스 엣지 2.7%. 0이 나오면 외곽 배팅은 모두 잃음.';
+  S.rel=relOf(0);S.ballR=0.66;S.last={};
+  buildPad();renderHist();resetResult();clearWin();save();render();refreshTab();
+}
+
+/* ---- 휠 그리기 ---- */
+var cv=$('cv'),ctx=cv.getContext('2d'),size=380;
+function fit(){
+  var w=$('ww').clientWidth,d=window.devicePixelRatio||1;
+  if(!w)return;
+  size=w;cv.width=Math.round(w*d);cv.height=Math.round(w*d);ctx.setTransform(d,0,0,d,0,0);
+}
+var FILL={red:'#b3262e',black:'#15191c',green:'#1d7a4e'};
+function draw(theta,rel,ballR){
+  var c0=size/2,R=c0-3,i,a0,a1;
+  ctx.clearRect(0,0,size,size);
+  var g=ctx.createRadialGradient(c0,c0,R*0.8,c0,c0,R);
+  g.addColorStop(0,'#2a1f10');g.addColorStop(1,'#120c05');
+  ctx.beginPath();ctx.arc(c0,c0,R,0,TAU);ctx.fillStyle=g;ctx.fill();
+  ctx.lineWidth=2;ctx.strokeStyle='#d6b25e';ctx.stroke();
+  ctx.beginPath();ctx.arc(c0,c0,R*0.955,0,TAU);ctx.fillStyle='#0b1a14';ctx.fill();
+  ctx.lineWidth=1;ctx.strokeStyle='#8f7637';ctx.stroke();
+  var rIn=R*0.6,rOut=R*0.84;
+  for(i=0;i<N;i++){
+    a0=theta+i*SEG-Math.PI/2;a1=a0+SEG;
+    ctx.beginPath();ctx.arc(c0,c0,rOut,a0,a1);ctx.arc(c0,c0,rIn,a1,a0,true);ctx.closePath();
+    ctx.fillStyle=FILL[colorOf(WHEEL[i])];ctx.fill();
+    ctx.lineWidth=1;ctx.strokeStyle='#d6b25e';ctx.stroke();
+  }
+  ctx.font='700 '+Math.max(8,size*(N>37?0.031:0.034))+'px "IBM Plex Mono",monospace';
+  ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#efe8d4';
+  for(i=0;i<N;i++){
+    var am=theta+(i+0.5)*SEG-Math.PI/2;
+    ctx.save();ctx.translate(c0+Math.cos(am)*R*0.775,c0+Math.sin(am)*R*0.775);ctx.rotate(am+Math.PI/2);
+    ctx.fillText(lbl(WHEEL[i]),0,0);ctx.restore();
+  }
+  var hg=ctx.createRadialGradient(c0,c0,0,c0,c0,rIn);
+  hg.addColorStop(0,'#1c6a52');hg.addColorStop(1,'#0e3a2d');
+  ctx.beginPath();ctx.arc(c0,c0,rIn-1,0,TAU);ctx.fillStyle=hg;ctx.fill();
+  ctx.lineWidth=2;ctx.strokeStyle='#d6b25e';ctx.stroke();
+  ctx.lineWidth=3;
+  for(i=0;i<4;i++){
+    var sa=theta+i*Math.PI/2;
+    ctx.beginPath();ctx.moveTo(c0+Math.cos(sa)*R*0.08,c0+Math.sin(sa)*R*0.08);ctx.lineTo(c0+Math.cos(sa)*R*0.44,c0+Math.sin(sa)*R*0.44);ctx.stroke();
+    ctx.beginPath();ctx.arc(c0+Math.cos(sa)*R*0.46,c0+Math.sin(sa)*R*0.46,R*0.026,0,TAU);ctx.fillStyle='#d6b25e';ctx.fill();
+  }
+  ctx.beginPath();ctx.arc(c0,c0,R*0.09,0,TAU);ctx.fillStyle='#d6b25e';ctx.fill();
+  var ba=theta+rel,bx=c0+Math.cos(ba)*R*ballR,by=c0+Math.sin(ba)*R*ballR,br=Math.max(4,R*0.034);
+  var bg=ctx.createRadialGradient(bx-br*0.3,by-br*0.3,br*0.1,bx,by,br);
+  bg.addColorStop(0,'#ffffff');bg.addColorStop(1,'#b9b9b9');
+  ctx.save();ctx.shadowColor='rgba(0,0,0,.6)';ctx.shadowBlur=4;ctx.shadowOffsetY=1;
+  ctx.beginPath();ctx.arc(bx,by,br,0,TAU);ctx.fillStyle=bg;ctx.fill();ctx.restore();
+}
+function sm(x){x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);}
+function lerp(a,b,t){return a+(b-a)*t;}
+
+/* ---- 스핀 ---- */
+var spinInfo=null,lastT=performance.now();
+function frame(now){
+  var dt=now-lastT;lastT=now;
+  if(spinInfo){
+    var t=Math.min(1,(now-spinInfo.start)/spinInfo.dur);
+    var e=1-Math.pow(1-t,3),e2=1-Math.pow(1-t,2);
+    var th=spinInfo.th0+spinInfo.W*e2;
+    var rel=spinInfo.pr+(1-e)*spinInfo.N*TAU;
+    var rr=lerp(lerp(0.66,0.89,sm(t/0.08)),0.66,sm((t-0.6)/0.4));
+    draw(th,rel,rr);
+    if(t>=1){
+      S.theta=th;S.rel=spinInfo.pr;S.ballR=0.66;
+      var res=spinInfo.result;spinInfo=null;resolve(res);
+    }
+  }else{
+    if(!reduced&&!S.spinning)S.theta+=dt*0.00007;
+    draw(S.theta,S.rel,S.ballR);
+  }
+  requestAnimationFrame(frame);
+}
+function spin(){
+  if(S.spinning)return;
+  if(!total()){say('배팅 칩을 먼저 올릴 것');return;}
+  if(S.erase)setErase(false);
+  S.spinning=true;clearWin();say('');render();
+  var idx=rnd(N);
+  spinInfo={start:performance.now(),dur:reduced?1200:5800,th0:S.theta,W:TAU*(3+Math.random()),
+    pr:relOf(idx),N:7,result:WHEEL[idx]};
+}
+function resolve(res){
+  var win=0,k,bet=total(),hit=[],gain=0,lost=0;
+  for(k in S.bets){if(REG[k].cover.indexOf(res)>=0){win+=S.bets[k]*REG[k].m;hit.push(k);gain+=S.bets[k]*(REG[k].m-1);}else lost+=S.bets[k];}
+  S.balance+=win;S.last=JSON.parse(JSON.stringify(S.bets));S.bets={};S.stack=[];
+  addResults([res]);
+  var col=colorOf(res),net=win-bet,rn=$('rnum'),zero=(res===0||res===37);
+  rn.textContent=lbl(res);rn.className='rnum '+col;
+  $('rtitle').textContent=lbl(res)+' · '+KO[col];
+  $('rsub').textContent=zero?'제로 · 외곽 배팅 전부 잃음':(res%2?'홀수':'짝수')+' · '+(res<=18?'1–18':'19–36')+' · '+(res<=12?'1번':res<=24?'2번':'3번')+' 다즌';
+  var ne=$('rnet');ne.className='net '+(net>0?'up':net<0?'down':'flat');
+  ne.textContent='배팅 '+fmt(bet)+' · 딴 칩 +'+fmt(gain)+' · 잃은 칩 −'+fmt(lost)+' → 합계 '+(net>0?'+'+fmt(net):net<0?'−'+fmt(-net):'±0')+' 칩';
+  clearWin();
+  if(cells['n:'+res])cells['n:'+res].classList.add('win');
+  hit.forEach(function(h){if(cells[h])cells[h].classList.add('win');});
+  S.spinning=false;save();render();refreshTab();
+  if(S.balance<1)say('칩을 모두 잃음. 다시 받기로 새로 시작할 수 있음');
+}
+
+/* ---- 탭 ---- */
+var TABS=['play','ana','str','his','set'];
+function showTab(t){
+  TAB=t;
+  TABS.forEach(function(x){
+    $('p-'+x).hidden=(x!==t);
+    $('t-'+x).setAttribute('aria-selected',x===t?'true':'false');
+  });
+  if(t==='play')fit();
+  refreshTab();
+}
+function refreshTab(){
+  if(TAB==='ana')renderAnalysis();
+  else if(TAB==='str')renderStrategy();
+  else if(TAB==='his')renderHistTab();
+  else if(TAB==='set')renderSettings();
+}
+
+/* ---- 분석 ---- */
+function numList(){return MODE==='am'?[0,37].concat(range(1,36)):range(0,36);}
+function viewLog(){var L=LOGS[MODE];return AN.win?L.slice(-AN.win):L;}
+function numCircle(x){return el('i','ci '+colorOf(x),lbl(x));}
+function scaleOf(pcts,exp){return Math.max(1,Math.max.apply(null,pcts.concat([exp]))*1.12);}
+function barRow(label,count,base,exp,scale,fill){
+  var row=el('div','brow'),pct=base?count/base*100:0;
+  row.appendChild(label);
+  var tr=el('div','btrack'),f=el('div','bfill'),m=el('div','bexp');
+  f.style.width=Math.min(100,pct/scale*100)+'%';f.style.background=fill;
+  m.style.left=Math.min(100,exp/scale*100)+'%';m.title='이론 확률 '+exp.toFixed(2)+'%';
+  tr.appendChild(f);tr.appendChild(m);row.appendChild(tr);
+  row.appendChild(el('div','bval',count+'회 · '+pct.toFixed(2)+'%'));
+  return row;
+}
+var BARC={red:'#d23a42',black:'#6b7880',green:'#34b57a',gold:'#d6b25e'};
+function renderAnalysis(){
+  var L=viewLog(),base=L.length,P=MODE==='am'?38:37,list=numList(),cnt=[],i;
+  for(i=0;i<38;i++)cnt.push(0);
+  L.forEach(function(x){cnt[x]++;});
+  $('a-mode').textContent=modeName(MODE)+' · 전체 '+LOGS[MODE].length+'회';
+  $('empty').hidden=base>0;
+  var seen=list.filter(function(x){return cnt[x]>0;});
+  var top=seen.slice().sort(function(x,y){return cnt[y]-cnt[x]||x-y;}).slice(0,5);
+  var sum=$('sum');sum.textContent='';
+  var b1=el('div');b1.appendChild(el('span',null,'분석 대상'));b1.appendChild(el('b',null,base+'회'));
+  var b2=el('div');b2.appendChild(el('span',null,'아직 안 나온 번호'));b2.appendChild(el('b',null,(P-seen.length)+'개'));
+  var b3=el('div','wide');b3.appendChild(el('span',null,'많이 나온 번호 TOP 5'));
+  var t5=el('div','top5');
+  if(!top.length)t5.appendChild(el('div',null,'기록 없음'));
+  top.forEach(function(x){var d=el('div');d.appendChild(numCircle(x));d.appendChild(el('span',null,'×'+cnt[x]+' · '+(cnt[x]/base*100).toFixed(2)+'%'));t5.appendChild(d);});
+  b3.appendChild(t5);sum.appendChild(b1);sum.appendChild(b2);sum.appendChild(b3);
+  [].forEach.call($('wseg').children,function(b){b.setAttribute('aria-pressed',Number(b.dataset.w)===AN.win?'true':'false');});
+  [].forEach.call($('sseg').children,function(b){b.setAttribute('aria-pressed',b.dataset.s===AN.sort?'true':'false');});
+
+  var rows=list.slice();
+  if(AN.sort==='cnt')rows.sort(function(x,y){return cnt[y]-cnt[x]||list.indexOf(x)-list.indexOf(y);});
+  var expN=100/P;
+  var pcts=rows.map(function(x){return base?cnt[x]/base*100:0;});
+  var sc=scaleOf(pcts,expN),bars=$('bars-num');bars.textContent='';
+  $('lg-num').textContent='점선 = 이론 확률 '+expN.toFixed(2)+'% (번호 1개당)';
+  rows.forEach(function(x){bars.appendChild(barRow(numCircle(x),cnt[x],base,expN,sc,BARC[colorOf(x)==='black'?'black':colorOf(x)]));});
+  renderRadial(cnt,base,expN,sc);
+
+  var zero=MODE==='am'?[0,37]:[0],zl=MODE==='am'?'0·00':'0';
+  var defs=[
+    ['색깔',[['빨강',REG.red.cover,BARC.red],['검정',REG.black.cover,BARC.black],[zl,zero,BARC.green]]],
+    ['홀 / 짝',[['홀수',REG.odd.cover,BARC.gold],['짝수',REG.even.cover,BARC.gold],[zl,zero,BARC.green]]],
+    ['1–18 / 19–36',[['1–18',REG.low.cover,BARC.gold],['19–36',REG.high.cover,BARC.gold],[zl,zero,BARC.green]]],
+    ['다즌',[['1–12',REG.d1.cover,BARC.gold],['13–24',REG.d2.cover,BARC.gold],['25–36',REG.d3.cover,BARC.gold],[zl,zero,BARC.green]]],
+    ['열',[['열 1',REG.c1.cover,BARC.gold],['열 2',REG.c2.cover,BARC.gold],['열 3',REG.c3.cover,BARC.gold],[zl,zero,BARC.green]]]
+  ];
+  var gbox=$('groups');gbox.textContent='';
+  defs.forEach(function(d){
+    var card=el('section','card'),head=el('div','rowhead');
+    head.appendChild(el('h2',null,d[0]+'별 확률'));card.appendChild(head);
+    var items=d[1].map(function(it){
+      var cc=0;it[1].forEach(function(x){cc+=cnt[x];});
+      return {l:it[0],c:cc,e:it[1].length/P*100,f:it[2]};
+    });
+    var sc2=scaleOf(items.map(function(it){return base?it.c/base*100:0;}),Math.max.apply(null,items.map(function(it){return it.e;})));
+    var bx=el('div','bars');
+    items.forEach(function(it){bx.appendChild(barRow(el('span','blab',it.l),it.c,base,it.e,sc2,it.f));});
+    card.appendChild(bx);
+    card.appendChild(el('p','hint','점선 = 이론 확률 · '+items.map(function(it){return it.l+' '+it.e.toFixed(2)+'%';}).join(' / ')));
+    gbox.appendChild(card);
+  });
+}
+
+/* ---- 휠 배열 원형 막대그래프 ---- */
+var SVGNS='http://www.w3.org/2000/svg';
+function svgEl(tag,attrs,txt){var e=document.createElementNS(SVGNS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);if(txt!=null)e.textContent=txt;return e;}
+function pol(cx,cy,rad,ang){return [cx+rad*Math.cos(ang),cy+rad*Math.sin(ang)];}
+function sector(cx,cy,r0,r1,a0,a1){
+  var p1=pol(cx,cy,r1,a0),p2=pol(cx,cy,r1,a1),p3=pol(cx,cy,r0,a1),p4=pol(cx,cy,r0,a0);
+  return 'M'+p1[0].toFixed(2)+' '+p1[1].toFixed(2)+'A'+r1+' '+r1+' 0 0 1 '+p2[0].toFixed(2)+' '+p2[1].toFixed(2)+
+    'L'+p3[0].toFixed(2)+' '+p3[1].toFixed(2)+'A'+r0+' '+r0+' 0 0 0 '+p4[0].toFixed(2)+' '+p4[1].toFixed(2)+'Z';
+}
+function renderRadial(cnt,base,expN,sc){
+  var box=$('radial');box.textContent='';
+  var cx=220,cy=220,rIn=88,rP=122,rB=128,maxL=70,seg=TAU/N,i;
+  if(WHEEL.indexOf(AN.sel)<0)AN.sel=null;
+  var svg=svgEl('svg',{viewBox:'0 0 440 440',role:'img','aria-label':'룰렛 휠 배열 번호별 확률 막대그래프'});
+  svg.appendChild(svgEl('circle',{cx:cx,cy:cy,r:rB,fill:'none',stroke:'rgba(239,232,212,.25)','stroke-width':1}));
+  svg.appendChild(svgEl('circle',{cx:cx,cy:cy,r:rB+maxL,fill:'none',stroke:'rgba(239,232,212,.12)','stroke-width':1}));
+  for(i=0;i<N;i++){
+    var x=WHEEL[i],a0=i*seg-Math.PI/2,a1=a0+seg,mid=(a0+a1)/2;
+    var pct=base?cnt[x]/base*100:0,len=Math.min(1,pct/sc)*maxL;
+    var g=svgEl('g',{'class':'sec'});
+    g.appendChild(svgEl('title',{},lbl(x)+' · '+cnt[x]+'회 · '+pct.toFixed(2)+'%'));
+    g.appendChild(svgEl('path',{d:sector(cx,cy,rB,rB+maxL,mid-seg*0.38,mid+seg*0.38),fill:'rgba(255,255,255,.05)'}));
+    g.appendChild(svgEl('path',{d:sector(cx,cy,rIn,rP,a0,a1),fill:FILL[colorOf(x)],stroke:AN.sel===x?'#d6b25e':'#8f7637','stroke-width':AN.sel===x?2.5:1}));
+    var tp=pol(cx,cy,(rIn+rP)/2,mid);
+    g.appendChild(svgEl('text',{x:tp[0].toFixed(1),y:tp[1].toFixed(1),'text-anchor':'middle','dominant-baseline':'central','font-size':9.5,'font-weight':700,fill:'#efe8d4','font-family':'IBM Plex Mono, monospace'},lbl(x)));
+    if(len>0){
+      var bc=colorOf(x)==='red'?BARC.red:colorOf(x)==='black'?BARC.black:BARC.green;
+      g.appendChild(svgEl('path',{d:sector(cx,cy,rB,rB+len,mid-seg*0.38,mid+seg*0.38),fill:bc,stroke:AN.sel===x?'#d6b25e':'none','stroke-width':1.5}));
+      var lp=pol(cx,cy,rB+len+10,mid);
+      g.appendChild(svgEl('text',{x:lp[0].toFixed(1),y:lp[1].toFixed(1),'text-anchor':'middle','dominant-baseline':'central','font-size':6.5,fill:'#9db3a8','font-family':'IBM Plex Mono, monospace'},pct.toFixed(2)+'%'));
+    }
+    g.appendChild(svgEl('path',{d:sector(cx,cy,rIn,rB+maxL+16,a0,a1),fill:'#000','fill-opacity':0,'pointer-events':'all'}));
+    (function(xx){g.addEventListener('click',function(){AN.sel=(AN.sel===xx)?null:xx;renderRadial(cnt,base,expN,sc);});})(x);
+    svg.appendChild(g);
+  }
+  svg.appendChild(svgEl('circle',{cx:cx,cy:cy,r:rB+Math.min(1,expN/sc)*maxL,fill:'none',stroke:'#d6b25e','stroke-width':1.5,'stroke-dasharray':'4 3'}));
+  var ff='DM Sans, sans-serif';
+  if(AN.sel!==null){
+    var sp=base?cnt[AN.sel]/base*100:0,scol=colorOf(AN.sel)==='red'?'#ff6b73':colorOf(AN.sel)==='green'?BARC.green:'#efe8d4';
+    svg.appendChild(svgEl('text',{x:cx,y:cy-14,'text-anchor':'middle','dominant-baseline':'central','font-size':34,'font-weight':700,fill:scol,'font-family':'Bodoni Moda, serif'},lbl(AN.sel)));
+    svg.appendChild(svgEl('text',{x:cx,y:cy+16,'text-anchor':'middle','font-size':13,fill:'#efe8d4','font-family':'IBM Plex Mono, monospace'},cnt[AN.sel]+'회 · '+sp.toFixed(2)+'%'));
+    svg.appendChild(svgEl('text',{x:cx,y:cy+34,'text-anchor':'middle','font-size':10,fill:'#9db3a8','font-family':ff},'이론 '+expN.toFixed(2)+'%'));
+  }else{
+    svg.appendChild(svgEl('text',{x:cx,y:cy-6,'text-anchor':'middle','dominant-baseline':'central','font-size':22,'font-weight':700,fill:'#efe8d4','font-family':'IBM Plex Mono, monospace'},'총 '+base+'회'));
+    svg.appendChild(svgEl('text',{x:cx,y:cy+20,'text-anchor':'middle','font-size':10.5,fill:'#9db3a8','font-family':ff},'번호를 누르면 상세'));
+  }
+  box.appendChild(svg);
+}
+
+/* ---- 번호 입력 ---- */
+function buildPad(){
+  var pad=$('pad');pad.textContent='';
+  numList().forEach(function(x){
+    var b=el('button',colorOf(x),lbl(x));b.type='button';b.setAttribute('aria-label',lbl(x)+' 추가');
+    b.addEventListener('click',function(){
+      addResults([x]);
+      $('ent-msg').textContent=lbl(x)+' 추가 · 총 '+LOGS[MODE].length+'회';
+      refreshTab();
+    });
+    pad.appendChild(b);
+  });
+}
+function addEntry(txt){
+  var toks=(txt||'').match(/\d+/g)||[],ok=[],bad=[];
+  toks.forEach(function(t){
+    var v=-1,p;
+    if(t==='00'){if(MODE==='am')v=37;}
+    else if(!/^0{2,}/.test(t)){p=parseInt(t,10);if(p>=0&&p<=36)v=p;}
+    if(v>=0)ok.push(v);else bad.push(t);
+  });
+  if(ok.length){addResults(ok);$('ent').value='';}
+  $('ent-msg').textContent=!toks.length?'번호를 입력할 것':
+    (ok.length?ok.length+'개 추가 · 총 '+LOGS[MODE].length+'회':'추가된 번호 없음')+(bad.length?' · 무시한 값: '+bad.join(', ')+(MODE==='eu'&&bad.indexOf('00')>=0?' (유러피언에는 00이 없음)':''):'');
+  refreshTab();
+}
+function undoEntry(){
+  var L=LOGS[MODE];
+  if(!L.length){$('ent-msg').textContent='삭제할 기록이 없음';return;}
+  var x=L.pop();saveLog(MODE);renderHist();
+  $('ent-msg').textContent=lbl(x)+' 삭제 · 총 '+L.length+'회';
+  refreshTab();
+}
+
+/* ---- 통계 / 추천 ---- */
+function lgamma(z){
+  var g=7,c=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+  var x=c[0],i,t;z-=1;
+  for(i=1;i<g+2;i++)x+=c[i]/(z+i);
+  t=z+g+0.5;
+  return 0.5*Math.log(2*Math.PI)+(z+0.5)*Math.log(t)-t+Math.log(x);
+}
+function gammaQ(a,x){
+  var gln=lgamma(a),n,sum,del,ap;
+  if(x<=0)return 1;
+  if(x<a+1){
+    ap=a;sum=1/a;del=sum;
+    for(n=1;n<500;n++){ap++;del*=x/ap;sum+=del;if(Math.abs(del)<Math.abs(sum)*1e-13)break;}
+    return Math.max(0,1-sum*Math.exp(-x+a*Math.log(x)-gln));
+  }
+  var b=x+1-a,c=1e300,d=1/b,h=d,i,an,dl;
+  for(i=1;i<500;i++){
+    an=-i*(i-a);b+=2;d=an*d+b;if(Math.abs(d)<1e-300)d=1e-300;
+    c=b+an/c;if(Math.abs(c)<1e-300)c=1e-300;
+    d=1/d;dl=d*c;h*=dl;if(Math.abs(dl-1)<1e-13)break;
+  }
+  return Math.min(1,Math.exp(-x+a*Math.log(x)-gln)*h);
+}
+function chiP(x2,df){return gammaQ(df/2,x2/2);}
+
+var RECC={a:'#d6b25e',b:'#6fc3ff',c:'#ffffff'};
+function rectOf(key){
+  var rh=34,nx=54,cw=70,top=38,v,r,c;
+  if(key.indexOf('n:')===0){
+    v=Number(key.slice(2));
+    if(v===0)return {x:nx,y:0,w:MODE==='am'?cw*1.5:cw*3,h:rh};
+    if(v===37)return {x:nx+cw*1.5,y:0,w:cw*1.5,h:rh};
+    r=Math.floor((v-1)/3);c=(v-1)%3;
+    return {x:nx+c*cw,y:top+r*rh,w:cw,h:rh};
+  }
+  var dz={d1:0,d2:1,d3:2},out={low:0,even:1,red:2,black:3,odd:4,high:5},col={c1:0,c2:1,c3:2};
+  if(key in dz)return {x:0,y:top+dz[key]*4*rh,w:50,h:4*rh};
+  if(key in out)return {x:268,y:top+out[key]*2*rh,w:50,h:2*rh};
+  return {x:nx+col[key]*cw,y:top+12*rh+4,w:cw,h:rh};
+}
+function renderRecBoard(hls){
+  var box=$('rec-board');box.textContent='';
+  var svg=svgEl('svg',{viewBox:'0 0 322 490',role:'img','aria-label':'추천 배팅 위치를 표시한 룰렛 테이블'});
+  var mono='IBM Plex Mono, monospace',body='DM Sans, sans-serif';
+  function cell(key,fill,label,fs,ff,tc){
+    var r=rectOf(key);
+    svg.appendChild(svgEl('rect',{x:r.x,y:r.y,width:r.w,height:r.h,fill:fill,stroke:'rgba(239,232,212,.45)','stroke-width':0.8}));
+    svg.appendChild(svgEl('text',{x:r.x+r.w/2,y:r.y+r.h/2,'text-anchor':'middle','dominant-baseline':'central','font-size':fs,'font-weight':700,fill:tc||'#efe8d4','font-family':ff},label));
+  }
+  cell('n:0',FILL.green,'0',13,mono);
+  if(MODE==='am')cell('n:37',FILL.green,'00',13,mono);
+  var n;
+  for(n=1;n<=36;n++)cell('n:'+n,FILL[colorOf(n)],String(n),13,mono);
+  ['d1','d2','d3'].forEach(function(k){cell(k,'#16503f',REG[k].l.replace(' 다즌',''),11,body);});
+  ['low','even','red','black','odd','high'].forEach(function(k){cell(k,k==='red'?FILL.red:k==='black'?FILL.black:'#16503f',REG[k].l,11,body);});
+  ['c1','c2','c3'].forEach(function(k){cell(k,'#16503f',REG[k].l,11,body);});
+  hls.forEach(function(h){
+    var r=rectOf(h.key),cx=r.x+r.w/2,cy=r.y+r.h/2;
+    svg.appendChild(svgEl('rect',{x:r.x+1.5,y:r.y+1.5,width:r.w-3,height:r.h-3,fill:h.tint,'fill-opacity':0.28,stroke:h.tint,'stroke-width':3}));
+    svg.appendChild(svgEl('circle',{cx:cx,cy:cy,r:9,fill:h.tint,stroke:'#06100c','stroke-width':1}));
+    svg.appendChild(svgEl('text',{x:cx,y:cy+0.5,'text-anchor':'middle','dominant-baseline':'central','font-size':11,'font-weight':700,fill:'#06100c','font-family':mono},h.label));
+  });
+  box.appendChild(svg);
+}
+function renderRec(){
+  var L=viewLog(),n=L.length,P=MODE==='am'?38:37,list=numList(),cnt=[],i;
+  for(i=0;i<38;i++)cnt.push(0);
+  L.forEach(function(x){cnt[x]++;});
+  function gc(k){var t=0;REG[k].cover.forEach(function(x){t+=cnt[x];});return t;}
+  $('rec-badge').textContent=(AN.win?'최근 '+AN.win+'회':'전체')+' · 기록 '+n+'회';
+  var v=$('rec-verdict');v.textContent='';
+  function line(t){v.appendChild(el('p',null,t));}
+  var need=5*P;
+  if(n<need){
+    line('번호 쏠림 검정: 기록 '+n+'회로는 판정할 수 없음(최소 '+need+'회 필요). 플레이하거나 분석 탭에서 번호를 더 입력하면 쌓임.');
+  }else{
+    var x2=0,E=n/P;
+    list.forEach(function(k){x2+=Math.pow(cnt[k]-E,2)/E;});
+    var pv=chiP(x2,P-1);
+    line('번호 쏠림 검정(카이제곱): p = '+pv.toFixed(2)+(pv>=0.05?' → 균등한 범위, 쏠림 근거 없음.':' → 균등과 다르게 나옴. 실제 편향일 수도 우연일 수도 있음(균등한 휠에서도 20번 중 1번은 0.05 미만이 나옴).'));
+  }
+  line('어느 배치든 평균 손익은 같음(−'+edgePct().toFixed(2)+'%). 승률이 높은 배치는 이길 때 이익이 작고 질 때 손실이 큼.');
+  line('기록으로 다음 번호를 맞힐 수는 없음. 스핀은 서로 독립이라 최근에 많이 나온 곳도 안 나온 곳도 다음 확률은 그대로임.');
+
+  var outs=['red','black','even','odd','low','high'],best=outs[0];
+  outs.forEach(function(k){if(gc(k)>gc(best))best=k;});
+  var dz=['d1','d2','d3'].slice().sort(function(a,b){return gc(b)-gc(a);}).slice(0,2).sort();
+  var top=list.filter(function(x){return cnt[x]>0;}).sort(function(a,b){return cnt[b]-cnt[a]||list.indexOf(a)-list.indexOf(b);}).slice(0,5);
+  var hls=[];
+  top.forEach(function(x){hls.push({key:'n:'+x,tint:RECC.c,label:'3'});});
+  dz.forEach(function(k){hls.push({key:k,tint:RECC.b,label:'2'});});
+  hls.push({key:best,tint:RECC.a,label:'1'});
+  renderRecBoard(hls);
+
+  var rl=$('rec-list');rl.textContent='';
+  function item(tint,no,title,rows,nums){
+    var d=el('div','rec'),h=el('div','rh');
+    var dot=el('span','dotc',no);dot.style.background=tint;h.appendChild(dot);h.appendChild(el('span',null,title));d.appendChild(h);
+    rows.forEach(function(t){d.appendChild(el('p',null,t));});
+    if(nums&&nums.length){var nr=el('div','nrow');nums.forEach(function(x){nr.appendChild(numCircle(x));});d.appendChild(nr);}
+    rl.appendChild(d);
+  }
+  var w1=(18/P*100).toFixed(2),w2=(24/P*100).toFixed(2);
+  item(RECC.a,'1','승률 우선 · 1:1 외곽 1곳',[
+    '걸 곳: '+REG[best].l+' (번호 '+REG[best].cover.join(', ')+')',
+    '승률 '+w1+'% · 1칩 기준 이기면 +1, 지면 −1',
+    n?'기록: '+n+'회 중 '+gc(best)+'회 ('+(gc(best)/n*100).toFixed(2)+'%), 이 6곳 중 기록상 가장 많음':'기록이 없어 기본 위치를 표시함(어디든 동일)'
+  ]);
+  item(RECC.b,'2','승률 더 높게 · 다즌 2곳',[
+    '걸 곳: '+REG[dz[0]].l+' + '+REG[dz[1]].l+' (각 1칩, 합계 2칩)',
+    '승률 '+w2+'% · 이기면 +1, 지면 −2',
+    n?'기록: 이 두 곳 합계 '+(gc(dz[0])+gc(dz[1]))+'회 ('+((gc(dz[0])+gc(dz[1]))/n*100).toFixed(2)+'%)':'기록이 없어 기본 위치를 표시함'
+  ]);
+  var k3=top.length;
+  item(RECC.c,'3','기록상 많이 나온 번호 '+(k3?k3+'개':''),
+    k3?['걸 곳: 아래 번호에 각 1칩씩 스트레이트 (합계 '+k3+'칩)','승률 '+(k3/P*100).toFixed(2)+'% · 이기면 +'+(36-k3)+', 지면 −'+k3,'횟수: '+top.map(function(x){return lbl(x)+'번 '+cnt[x]+'회';}).join(', ')+' (예측력 없음)']
+       :['기록이 없어 표시할 수 없음'],top);
+  $('rec-note').textContent='그림판의 ①(금색) ②(파란색) ③(흰색) 위치에 칩을 올리는 방식. 범위는 분석 탭의 "요약" 범위(전체/최근 N회)를 따름. 승률을 올리려고 덮는 칸을 늘리면 이익 폭이 그만큼 줄어서 평균 손익은 그대로임.';
+}
+function rngTest(){
+  var out=$('rng-out'),draws=100000,c=[],i;
+  for(i=0;i<N;i++)c.push(0);
+  for(i=0;i<draws;i++)c[rnd(N)]++;
+  var E=draws/N,x2=0,mn=0,mx=0;
+  for(i=0;i<N;i++){x2+=Math.pow(c[i]-E,2)/E;if(c[i]<c[mn])mn=i;if(c[i]>c[mx])mx=i;}
+  var pv=chiP(x2,N-1);
+  out.textContent='';
+  [modeName(MODE)+' '+N+'칸 · '+fmt(draws)+'회 추첨 · 칸당 기대 '+E.toFixed(2)+'회',
+   '가장 적게 나온 칸 '+lbl(WHEEL[mn])+'번 '+fmt(c[mn])+'회 · 가장 많이 나온 칸 '+lbl(WHEEL[mx])+'번 '+fmt(c[mx])+'회',
+   '카이제곱 p = '+pv.toFixed(2)+(pv>=0.05?' → 균등한 범위':' → 균등과 다르게 보임. 균등한 난수여도 20번 중 1번은 이렇게 나오니 다시 돌려 볼 것')
+  ].forEach(function(t){out.appendChild(el('p',null,t));});
+}
+
+/* ---- 전략 ---- */
+var FIB=[1,1];while(FIB.length<45)FIB.push(FIB[FIB.length-1]+FIB[FIB.length-2]);
+var ST={unit:1,spins:500,goal:0.1,runs:3000,key:'',res:null,start:0,cycles:10000,ckey:'',cyc:null};
+var STRATS=[
+  {id:'flat',name:'플랫(고정)',
+   rule:'항상 같은 금액을 배팅함.',
+   risk:'변동이 가장 작아 가장 오래 버팀. 평균 손실은 총 배팅액 × 하우스 엣지로 정해짐.',
+   make:function(u){return {bet:function(){return u;},update:function(){},atStart:function(){return true;}};}},
+  {id:'mart',name:'마틴게일',
+   rule:'지면 2배(1, 2, 4, 8 … 2048), 이기면 처음 단위로 복귀. 이기는 순간 직전까지의 손실을 모두 만회하고 1단위 이익.',
+   risk:'작은 이익이 자주, 큰 손실이 드물게 나는 구조. 연패하면 배팅액이 폭증해 보유 칩이 먼저 바닥남.',
+   make:function(u){var l=0;return {bet:function(){return u*Math.pow(2,Math.min(l,40));},update:function(w){l=w?0:l+1;},atStart:function(){return l===0;}};}},
+  {id:'paro',name:'역마틴게일(파롤리)',
+   rule:'이기면 2배, 지면 처음 단위로 복귀. 3연승(1, 2, 4단위)에서 정산하고 처음으로 돌아감.',
+   risk:'실패해도 한 사이클 손실은 1단위, 3연승하면 +7단위. 연승이 드물어 소액 손실이 자주 쌓임.',
+   make:function(u){var k=0;return {bet:function(){return u*Math.pow(2,k);},update:function(w){if(w){k++;if(k>=3)k=0;}else k=0;},atStart:function(){return k===0;}};}},
+  {id:'dal',name:'달랑베르',
+   rule:'지면 1단위 올리고, 이기면 1단위 내림.',
+   risk:'증가가 완만해 마틴게일보다 안전함. 연패가 길면 배팅액과 손실이 천천히 커짐.',
+   make:function(u){var k=1;return {bet:function(){return u*k;},update:function(w){k=w?Math.max(1,k-1):k+1;},atStart:function(){return k===1;}};}},
+  {id:'fib',name:'피보나치',
+   rule:'지면 수열(1, 1, 2, 3, 5, 8, 13 …)에서 한 칸 전진, 이기면 두 칸 후퇴.',
+   risk:'마틴게일보다 완만하지만 연패 구간에서 누적 손실은 여전히 큼.',
+   make:function(u){var i=0;return {bet:function(){return u*FIB[Math.min(i,FIB.length-1)];},update:function(w){i=w?Math.max(0,i-2):i+1;},atStart:function(){return i===0;}};}},
+  {id:'lab',name:'라부셰르(취소법)',
+   rule:'목록 [1, 2, 3]에서 양 끝의 합을 배팅. 이기면 양 끝을 지우고, 지면 잃은 금액을 목록 끝에 추가. 목록이 비면 한 사이클 완료(+6단위).',
+   risk:'연패하면 목록과 배팅액이 계속 커짐. 한 사이클 이익은 처음 목록 합계로 고정됨.',
+   make:function(u){var list=[1,2,3],last=1;return {bet:function(){last=list.length>1?list[0]+list[list.length-1]:list[0];return u*last;},update:function(w){if(w){if(list.length>1){list.shift();list.pop();}else{list.shift();}if(!list.length)list=[1,2,3];}else{list.push(last);}},atStart:function(){return list.length===3&&list[0]===1&&list[1]===2&&list[2]===3;}};}},
+  {id:'1326',name:'1-3-2-6',
+   rule:'연승할 때 1 → 3 → 2 → 6단위로 배팅, 지면 1단위로 복귀, 4연승하면 한 사이클 완료(+12단위).',
+   risk:'한 사이클 최대 손실은 2단위. 4연승이 필요해 이익 확률이 낮음.',
+   make:function(u){var q=[1,3,2,6],i=0;return {bet:function(){return u*q[i];},update:function(w){if(w){i++;if(i>=q.length)i=0;}else i=0;},atStart:function(){return i===0;}};}}
+];
+function pWin(){return 18/(MODE==='am'?38:37);}
+function edgePct(){return MODE==='am'?200/38:100/37;}
+function srow(label,frac,text,mark,fill){
+  var row=el('div','brow wide');row.appendChild(el('span','blab',label));
+  var tr=el('div','btrack'),f=el('div','bfill');
+  f.style.width=Math.max(0,Math.min(1,frac))*100+'%';f.style.background=fill;tr.appendChild(f);
+  if(mark!=null){var m=el('div','bexp');m.style.left=Math.max(0,Math.min(1,mark))*100+'%';tr.appendChild(m);}
+  row.appendChild(tr);row.appendChild(el('div','bval',text));
+  return row;
+}
+function runSim(start){
+  var pw=pWin(),u=ST.unit,goalAmt=ST.goal?Math.ceil(start*(1+ST.goal)):Infinity;
+  return STRATS.map(function(st){
+    var hit=0,bust=0,sum=0,fin=[],r,s;
+    for(r=0;r<ST.runs;r++){
+      var m=st.make(u),bal=start,state=0;
+      for(s=0;s<ST.spins;s++){
+        if(bal<u){state=2;break;}
+        var amt=Math.min(m.bet(),bal),win=Math.random()<pw;
+        bal+=win?amt:-amt;m.update(win);
+        if(bal>=goalAmt){state=1;break;}
+      }
+      if(state===0&&bal<u)state=2;
+      if(state===1)hit++;else if(state===2)bust++;
+      sum+=bal;fin.push(bal);
+    }
+    fin.sort(function(x,y){return x-y;});
+    return {id:st.id,name:st.name,hit:hit/ST.runs*100,bust:bust/ST.runs*100,avg:sum/ST.runs,med:fin[Math.floor(ST.runs/2)]};
+  });
+}
+function runCycles(B){
+  var pw=pWin(),u=ST.unit,n=ST.cycles;
+  return STRATS.map(function(st){
+    var win=0,tie=0,loss=0,sum=0,c,s;
+    for(c=0;c<n;c++){
+      var m=st.make(u),bal=B;
+      for(s=0;s<3000;s++){
+        if(bal<u)break;
+        var amt=Math.min(m.bet(),bal),w=Math.random()<pw;
+        bal+=w?amt:-amt;m.update(w);
+        if(m.atStart())break;
+      }
+      var net=bal-B;sum+=net;
+      if(net>0)win++;else if(net===0)tie++;else loss++;
+    }
+    return {id:st.id,win:win/n*100,tie:tie/n*100,loss:loss/n*100,avg:sum/n};
+  });
+}
+function renderStratList(){
+  var sl=$('slist');sl.textContent='';
+  var pw=pWin()*100;
+  STRATS.forEach(function(st,idx){
+    var c=ST.cyc[idx],d=el('div','strat');
+    d.appendChild(el('b',null,st.name));
+    d.appendChild(el('span',null,st.rule));
+    d.appendChild(el('span',null,st.risk));
+    d.appendChild(el('span','wr','한 스핀 승률 '+pw.toFixed(2)+'% · 한 사이클 결과 이익 '+c.win.toFixed(2)+'% / 본전 '+c.tie.toFixed(2)+'% / 손실 '+c.loss.toFixed(2)+'% · 사이클 평균 '+(c.avg>=0?'+':'−')+Math.abs(c.avg).toFixed(2)+'칩'));
+    sl.appendChild(d);
+  });
+}
+function renderWinRates(){
+  var P=MODE==='am'?38:37,bx=$('w-bars');bx.textContent='';
+  $('w-mode').textContent=modeName(MODE)+' · '+P+'칸';
+  [['숫자 1개 35:1',1],['스플릿 17:1',2],['스트리트 11:1',3],['코너 8:1',4],['식스라인 5:1',6],['다즌·열 2:1',12],['1:1 외곽',18]].forEach(function(x){
+    var pct=x[1]/P*100;bx.appendChild(srow(x[0],pct/50,pct.toFixed(2)+'%',null,'#d6b25e'));
+  });
+  $('w-note').textContent='1:1 외곽은 빨강/검정, 홀/짝, 1–18/19–36. '+(MODE==='am'?'0과 00':'0')+'이 나오면 모두 짐. 승률은 전략과 무관하게 고정이고, 배당과 함께 따지면 평균 손실(하우스 엣지)은 '+edgePct().toFixed(2)+'%.';
+}
+function applyBalance(inId,msgId){
+  var raw=String($(inId).value||'').replace(/[,\s]/g,''),msg=$(msgId);
+  if(!/^\d+$/.test(raw)){msg.textContent='0 이상의 정수를 입력할 것';return;}
+  var v=parseInt(raw,10);
+  if(v>100000000){msg.textContent='최대 100,000,000칩까지 입력할 수 있음';return;}
+  if(S.spinning){msg.textContent='스핀 중에는 바꿀 수 없음';return;}
+  clearAll();S.balance=v;save();render();
+  $(inId).value='';msg.textContent='보유 칩을 '+fmt(v)+'으로 설정함';
+  refreshTab();
+}
+function syncSeg(id,attr,val){[].forEach.call($(id).children,function(b){b.setAttribute('aria-pressed',Number(b.dataset[attr])===val?'true':'false');});}
+function renderStrategy(){
+  var B=S.balance,u=ST.unit,pl=1-pWin(),i,k;
+  renderRec();
+  $('s-mode').textContent=modeName(MODE)+' · 1:1 외곽 배팅 기준';
+  var now=$('s-now');now.textContent='';
+  [['룰렛 종류',modeName(MODE)],['하우스 엣지',edgePct().toFixed(2)+'%'],['보유 칩',fmt(B)],['100칩 배팅당 평균 손실',edgePct().toFixed(2)+'칩']].forEach(function(x){
+    var d=el('div');d.appendChild(el('span',null,x[0]));d.appendChild(el('b',null,x[1]));now.appendChild(d);
+  });
+  syncSeg('useg','u',u);syncSeg('spseg','n',ST.spins);syncSeg('gseg','g',ST.goal);
+
+  var K=0;while(u*(Math.pow(2,K+1)-1)<=B)K++;
+  var mt=$('mt');mt.textContent='';
+  var thead=el('tr');['단계','배팅액','누적 손실','도달 확률','보유 칩으로'].forEach(function(h){thead.appendChild(el('th',null,h));});
+  mt.appendChild(thead);
+  for(k=1;k<=12;k++){
+    var tr=el('tr'),bet=u*Math.pow(2,k-1),cum=u*(Math.pow(2,k)-1),okk=k<=K;
+    tr.appendChild(el('td',null,String(k)));tr.appendChild(el('td',null,fmt(bet)));tr.appendChild(el('td',null,fmt(cum)));
+    tr.appendChild(el('td',null,(Math.pow(pl,k-1)*100).toFixed(2)+'%'));
+    tr.appendChild(el('td',okk?'ok':'no',okk?'가능':'불가'));
+    mt.appendChild(tr);
+  }
+  $('mt-note').textContent=K
+    ?K+'단계(배팅액 '+fmt(u*Math.pow(2,K-1))+')까지 진행 가능. '+K+'연패 확률 '+(Math.pow(pl,K)*100).toFixed(2)+'%, 이때 '+fmt(u*(Math.pow(2,K)-1))+'칩을 잃음. 이기는 사이클은 매번 +'+u+'칩. 도달 확률 = 그 단계까지 연패할 확률.'
+    :'보유 칩이 기본 단위보다 적어 마틴게일을 시작할 수 없음.';
+
+  renderWinRates();
+
+  var start=B>=u?B:1000,key=[MODE,u,ST.spins,ST.goal,start].join('|');
+  if(ST.key!==key){ST.res=runSim(start);ST.key=key;ST.start=start;}
+  var ckey=[MODE,u,start].join('|');
+  if(ST.ckey!==ckey){ST.cyc=runCycles(start);ST.ckey=ckey;}
+  renderStratList();
+  renderSimOut(B>=u);
+}
+function renderSimOut(real){
+  var res=ST.res,start=ST.start,out=$('sim-out');out.textContent='';
+  function block(title,rows){
+    out.appendChild(el('h3','sub',title));
+    var bx=el('div','bars');rows.forEach(function(r){bx.appendChild(r);});out.appendChild(bx);
+  }
+  if(ST.goal>0)block('+'+Math.round(ST.goal*100)+'% 목표를 먼저 달성한 비율',res.map(function(r){return srow(r.name,r.hit/100,r.hit.toFixed(2)+'%',null,'#d6b25e');}));
+  block('파산(칩 소진) 비율',res.map(function(r){return srow(r.name,r.bust/100,r.bust.toFixed(2)+'%',null,'#ff9a8f');}));
+  var mx=Math.max(start*1.15,Math.max.apply(null,res.map(function(r){return Math.max(r.avg,r.med);}))*1.05);
+  block('평균 최종 칩 (점선 = 시작 칩)',res.map(function(r){return srow(r.name,r.avg/mx,fmt(Math.round(r.avg)),start/mx,'#9cc4ff');}));
+  block('최종 칩 중앙값 (점선 = 시작 칩)',res.map(function(r){return srow(r.name,r.med/mx,fmt(r.med),start/mx,'#9cc4ff');}));
+  $('sim-hint').textContent='각 전략 '+fmt(ST.runs)+'회 시행 · 시작 칩 '+fmt(start)+(real?'':'(보유 칩이 부족해 1,000으로 가정)')+' · 빨강/검정 1:1 배팅 · 남은 칩이 단위보다 적으면 파산 · 배팅액이 남은 칩보다 크면 남은 칩 전부 배팅 · 결과는 난수라 다시 돌리면 조금씩 달라짐.';
+  var box=$('sim-sum');box.textContent='';
+  function line(t){box.appendChild(el('p',null,t));}
+  line('현재 룰렛('+modeName(MODE)+')에서 1:1 배팅의 한 스핀 승률은 '+(pWin()*100).toFixed(2)+'%. 어떤 전략을 써도 이 확률은 그대로이고, 전략이 바꾸는 것은 한 사이클을 이익으로 끝낼 확률과 손실의 크기임.');
+  var bestAvg=res.reduce(function(a,b){return b.avg>a.avg?b:a;});
+  line('평균 최종 칩이 가장 높은 전략: '+bestAvg.name+' ('+fmt(Math.round(bestAvg.avg))+', 시작 '+fmt(start)+').');
+  if(ST.goal>0){
+    var bestHit=res.reduce(function(a,b){return b.hit>a.hit?b:a;});
+    line('+'+Math.round(ST.goal*100)+'% 목표 달성 비율이 가장 높은 전략: '+bestHit.name+' '+bestHit.hit.toFixed(2)+'% (같은 전략의 파산 '+bestHit.bust.toFixed(2)+'%).');
+  }
+  line(res.every(function(r){return r.avg<start;})
+    ?'모든 전략의 평균이 시작 칩보다 낮음. 전략은 손익의 모양(자주 조금 이기고 드물게 크게 잃는지)만 바꾸고 하우스 엣지는 바꾸지 못함.'
+    :'일부 전략의 평균이 시작 칩을 넘었지만 표본 오차임. 시행이 충분하면 평균은 하우스 엣지만큼 시작 칩보다 낮아지는 것이 정상.');
+  if(MODE==='am')line('아메리칸은 하우스 엣지가 5.26%라 유러피언(2.70%)보다 평균 손실이 약 2배임. 설정 탭에서 유러피언으로 바꾸는 쪽이 유리.');
+}
+
+/* ---- 기록 / 설정 ---- */
+function renderHistTab(){
+  var L=LOGS[MODE],box=$('dots');box.textContent='';
+  $('h-mode').textContent=modeName(MODE);
+  $('h-info').textContent=L.length?'총 '+L.length+'회 · 왼쪽이 오래된 번호, 금색 테두리가 가장 최근':'아직 기록이 없음. 플레이하거나 분석 탭에서 번호를 입력하면 여기에 나열됨.';
+  var frag=document.createDocumentFragment();
+  L.forEach(function(x,i){var d=el('i','dot '+colorOf(x),lbl(x));if(i===L.length-1)d.classList.add('last');frag.appendChild(d);});
+  box.appendChild(frag);
+}
+function renderSettings(){
+  $('set-cnt').textContent='저장된 기록: 아메리칸 '+LOGS.am.length+'회 · 유러피언 '+LOGS.eu.length+'회';
+}
+function arm(btn,idle,sure,fn){
+  var t=null;btn.textContent=idle;
+  function disarm(){btn.dataset.armed='0';btn.classList.remove('armed');btn.textContent=idle;}
+  btn.addEventListener('click',function(){
+    if(btn.dataset.armed==='1'){clearTimeout(t);disarm();fn();return;}
+    btn.dataset.armed='1';btn.classList.add('armed');btn.textContent=sure;
+    clearTimeout(t);t=setTimeout(disarm,4000);
+  });
+}
+function setMsg(m){$('set-msg').textContent=m;}
+arm($('rs-cur'),'현재 룰렛 기록 초기화','한 번 더 누르면 삭제됨',function(){
+  LOGS[MODE]=[];saveLog(MODE);renderHist();renderSettings();setMsg(modeName(MODE)+' 기록을 초기화함');
+});
+arm($('rs-all'),'모든 기록 초기화','한 번 더 누르면 삭제됨',function(){
+  LOGS.am=[];LOGS.eu=[];saveLog('am');saveLog('eu');renderHist();renderSettings();setMsg('모든 분석 기록을 초기화함');
+});
+arm($('rs-bal'),'칩 1,000개로 초기화','한 번 더 누르면 초기화됨',function(){
+  if(S.spinning){setMsg('스핀 중에는 초기화할 수 없음');return;}
+  clearAll();S.balance=START;save();render();setMsg('보유 칩을 1,000개로 되돌림');
+});
+
+/* ---- 이벤트 ---- */
+$('spin').addEventListener('click',spin);
+$('undo').addEventListener('click',undo);
+$('clear').addEventListener('click',clearAll);
+$('rebet').addEventListener('click',rebet);
+$('dbl').addEventListener('click',dbl);
+$('refill').addEventListener('click',function(){S.balance=START;save();say('');render();});
+[].forEach.call(document.querySelectorAll('.mseg button'),function(b){b.addEventListener('click',function(){setMode(b.dataset.m,true);});});
+TABS.forEach(function(t){$('t-'+t).addEventListener('click',function(){showTab(t);});});
+$('ent-add').addEventListener('click',function(){addEntry($('ent').value);});
+$('ent').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();addEntry($('ent').value);}});
+$('ent-undo').addEventListener('click',undoEntry);
+[].forEach.call($('wseg').children,function(b){b.addEventListener('click',function(){AN.win=Number(b.dataset.w);renderAnalysis();});});
+[].forEach.call($('sseg').children,function(b){b.addEventListener('click',function(){AN.sort=b.dataset.s;renderAnalysis();});});
+[['bal-in','bal-set','set-msg'],['bal-in2','bal-set2','bal-msg']].forEach(function(a){
+  $(a[1]).addEventListener('click',function(){applyBalance(a[0],a[2]);});
+  $(a[0]).addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();applyBalance(a[0],a[2]);}});
+});
+$('rng-test').addEventListener('click',rngTest);
+$('fill-go').addEventListener('click',function(){
+  var m=$('fill-msg'),t=parseInt(($('fill-in').value||'').replace(/[^0-9]/g,''),10),cur=LOGS[MODE].length,add=[],i;
+  if(!t||t>LOGCAP){m.textContent='1~'+LOGCAP+' 사이 숫자를 입력할 것';return;}
+  if(t<=cur){m.textContent='이미 '+cur+'회라 더 채울 것이 없음';return;}
+  for(i=0;i<t-cur;i++)add.push(WHEELS[MODE][rnd(WHEELS[MODE].length)]);
+  addResults(add);renderSettings();
+  m.textContent=modeName(MODE)+' '+cur+'회 → '+LOGS[MODE].length+'회 · 추가된 '+add.length+'개: '+add.map(lbl).join(' ');
+});
+$('erase').addEventListener('click',function(){if(!S.spinning)setErase(!S.erase);});
+function bindSeg(id,attr,fn){[].forEach.call($(id).children,function(b){b.addEventListener('click',function(){fn(Number(b.dataset[attr]));renderStrategy();});});}
+bindSeg('useg','u',function(v){ST.unit=v;});
+bindSeg('spseg','n',function(v){ST.spins=v;});
+bindSeg('gseg','g',function(v){ST.goal=v;});
+$('sim-redo').addEventListener('click',function(){ST.key='';renderStrategy();});
+window.addEventListener('resize',fit);
+fit();setMode(MODE,false);
+requestAnimationFrame(function(t){lastT=t;frame(t);});
+})();
+</script>
+
+<script>
+if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
+  window.addEventListener('load',function(){try{navigator.serviceWorker.register('sw.js');}catch(e){}});
+}
+</script>
+</body></html>
