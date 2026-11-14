@@ -471,7 +471,7 @@ body.eu .zrow{grid-template-columns:1fr}
         <div class="sumtxt" id="rng-out" style="margin-top:10px"></div>
       </section>
       <p class="status" id="set-msg" aria-live="polite"></p>
-      <p class="hint" style="text-align:center">앱 버전 2026-11-14 · v6</p>
+      <p class="hint" style="text-align:center">앱 버전 2026-11-14 · v7</p>
     </div>
   </div>
 
@@ -561,13 +561,14 @@ var S={balance:START,bets:{},stack:[],last:{},showLast:false,chip:1,spinning:fal
 var LOGS={am:[],eu:[]},AN={win:0,sort:'num',sel:null};
 try{var sv=parseInt(localStorage.getItem('roulette-bal'),10);if(isFinite(sv)&&sv>=0)S.balance=sv;}catch(e){}
 try{if(localStorage.getItem('roulette-mode')==='eu')MODE='eu';}catch(e){}
+try{var lv=JSON.parse(localStorage.getItem('roulette-last'));if(lv&&lv.m===MODE&&lv.b&&typeof lv.b==='object')S.last=lv.b;}catch(e){}
 ['am','eu'].forEach(function(m){
   try{
     var v=JSON.parse(localStorage.getItem('roulette-log-'+m));
     if(Array.isArray(v))LOGS[m]=v.filter(function(x){return typeof x==='number'&&x>=0&&x<=(m==='am'?37:36);});
   }catch(e){}
 });
-function save(){try{localStorage.setItem('roulette-bal',String(S.balance));localStorage.setItem('roulette-mode',MODE);}catch(e){}}
+function save(){try{localStorage.setItem('roulette-bal',String(S.balance));localStorage.setItem('roulette-mode',MODE);localStorage.setItem('roulette-last',JSON.stringify({m:MODE,b:S.last}));}catch(e){}}
 function saveLog(m){try{localStorage.setItem('roulette-log-'+m,JSON.stringify(LOGS[m]));}catch(e){}}
 function addResults(list){
   var L=LOGS[MODE];
@@ -665,6 +666,9 @@ function clearAll(){
 }
 function rebet(){
   if(S.spinning)return;
+  var clean={},ck;
+  for(ck in S.last){if(REG[ck]&&S.last[ck]>0&&isFinite(S.last[ck]))clean[ck]=Math.floor(S.last[ck]);}
+  S.last=clean;
   var need=0,k;for(k in S.last)need+=S.last[k];
   if(!need){say('직전 배팅이 없음');return;}
   clearAll();
@@ -737,7 +741,7 @@ function setMode(m,user){
   $('edge').textContent=m==='am'
     ?'아메리칸: 0과 00이 있어 하우스 엣지 5.26% (탑라인 7.89%). 0 또는 00이 나오면 외곽 배팅은 모두 잃음.'
     :'유러피언: 0이 하나뿐이라 하우스 엣지 2.7%. 0이 나오면 외곽 배팅은 모두 잃음.';
-  S.rel=relOf(0);S.ballR=0.66;S.last={};S.showLast=false;
+  S.rel=relOf(0);S.ballR=0.66;if(user)S.last={};S.showLast=false;
   buildPad();renderHist();resetResult();clearWin();save();render();refreshTab();
 }
 
